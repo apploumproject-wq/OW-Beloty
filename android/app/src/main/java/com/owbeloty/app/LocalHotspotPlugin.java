@@ -638,6 +638,6 @@ public class LocalHotspotPlugin extends Plugin {
         for (String ip : ips) {
             if (ip.startsWith("192.168.")) return ip;
         }
-        return ips.isEmpty() ? "192.168.43.1" : ips.get(0);
+        return ips.isEmpty() ? "192.168.49.1" : ips.get(0);
     }
 }
