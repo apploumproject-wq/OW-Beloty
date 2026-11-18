@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PluginListenerHandle } from '@capacitor/core';
+import { AboutView } from './components/AboutView';
 import { CreateMatchView } from './components/CreateMatchView';
 import { GameTableView } from './components/GameTableView';
 import { HomeMenu, ScreenRoute } from './components/HomeMenu';
@@ -489,6 +490,10 @@ export default function App() {
         onBack={() => setRoute('ACCUEIL')}
       />
     );
+  }
+
+  if (route === 'A_PROPOS') {
+    return <AboutView onBack={() => setRoute('ACCUEIL')} />;
   }
 
   return (
