@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OW\'Beloty</string>
+    <string name="title_activity_main">OW\'Beloty</string>
+    <string name="package_name">com.owbeloty.app</string>
+    <string name="custom_url_scheme">com.owbeloty.app</string>
+</resources>

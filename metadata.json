@@ -1,0 +1,6 @@
+{
+  "name": "OW'Beloty",
+  "description": "Jeu de belote à 4 joueurs avec tapis vert foncé, profils locaux et moteur de score OW'Beloty.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
