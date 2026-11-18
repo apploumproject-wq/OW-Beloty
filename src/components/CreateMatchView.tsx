@@ -27,6 +27,7 @@ interface CreateMatchViewProps {
   defaultTurnDirection: TurnDirection;
   hostSession: MultiplayerHostSession | null;
   hostIp: string;
+  managedWifi: { ssid: string; password: string } | null;
   hostServerError: string | null;
   isStartingServer: boolean;
   onStartHotspotHost: (turnDirection: TurnDirection) => void;
@@ -44,6 +45,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   defaultTurnDirection,
   hostSession,
   hostIp,
+  managedWifi,
   hostServerError,
   isStartingServer,
   onStartHotspotHost,
@@ -70,7 +72,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   const activeCode = hostSession?.sessionCode ?? previewConfig.sessionCode;
   const activePort = hostSession?.port ?? DEFAULT_HOTSPOT_PORT;
   const effectiveIp = hostIp || detectedIp;
-  const qrPayloadString = `OWBELOTY|${effectiveIp}|${activePort}|${activeCode}`;
+  const qrPayloadString = `OWBELOTY|${effectiveIp}|${activePort}|${activeCode}|${managedWifi ? encodeURIComponent(managedWifi.ssid) : ''}|${managedWifi ? encodeURIComponent(managedWifi.password) : ''}`;
   const isNativeAndroid = isNativeAndroidEnvironment();
 
   useEffect(() => {
@@ -204,12 +206,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     Héberger sur Hotspot Wi-Fi local
                   </h2>
                   <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                    1. Activez manuellement le <strong>Point d’accès Wi-Fi</strong>{' '}
-                    dans les réglages de ce téléphone Android (aucun accès Internet
-                    requis).
-                    <br />
-                    2. Les 3 autres joueurs se connectent à ce réseau Wi-Fi puis
-                    ouvrent « Rejoindre une partie ».
+                    OW’Beloty demande à Android de créer automatiquement un réseau Wi-Fi local (sans Internet). Les autres joueurs scannent ou collent le code d’invitation ; Android leur demandera ensuite l’autorisation de rejoindre ce réseau.
                   </p>
                 </div>
               </div>
@@ -275,7 +272,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     <span>
                       {isStartingServer
                         ? 'Ouverture du salon Hotspot...'
-                        : 'Ouvrir le salon Hotspot'}
+                        : 'Créer automatiquement le réseau et le salon'}
                     </span>
                   </button>
                 </>
@@ -284,6 +281,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                   {/* Coordonnées de connexion + QR Code */}
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-center rounded-2xl bg-[#04190F] border border-amber-300/25 p-4">
                     <div className="flex flex-col gap-2 text-sm tabular-nums">
+                      {managedWifi && <div className="text-xs text-emerald-100/80">Réseau Wi-Fi : <strong className="text-[#F7F4EB]">{managedWifi.ssid}</strong></div>}
                       <div className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
                         <QrCode className="w-4 h-4" />
                         <span>Identifiants de connexion locale</span>
