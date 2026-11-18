@@ -16,7 +16,7 @@ import { SubPageHeader } from './SubPageHeader';
 interface JoinMatchViewProps {
   localProfile: PlayerProfile;
   clientState: ClientSessionState | null;
-  onConnectToHost: (hostIp: string, port: number, sessionCode: string) => void;
+  onConnectToHost: (hostIp: string, port: number, sessionCode: string, wifi?: { ssid: string; password: string }) => void;
   onDisconnectFromHost: () => void;
   onGoToProfile: () => void;
   onBack: () => void;
@@ -26,6 +26,8 @@ export function parseOwBelotyInviteText(raw: string): {
   hostIp?: string;
   port?: number;
   sessionCode?: string;
+  ssid?: string;
+  password?: string;
 } | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -38,6 +40,8 @@ export function parseOwBelotyInviteText(raw: string): {
         hostIp: parts[1].trim(),
         port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
         sessionCode: parts[3].trim().toUpperCase(),
+        ssid: parts[4] ? decodeURIComponent(parts[4]) : undefined,
+        password: parts[5] ? decodeURIComponent(parts[5]) : undefined,
       };
     }
   }
@@ -49,11 +53,15 @@ export function parseOwBelotyInviteText(raw: string): {
       const ip = url.searchParams.get('ip') ?? undefined;
       const portStr = url.searchParams.get('port');
       const code = url.searchParams.get('code') ?? undefined;
+      const ssid = url.searchParams.get('ssid') ?? undefined;
+      const password = url.searchParams.get('password') ?? undefined;
       const parsedPort = portStr ? Number.parseInt(portStr, 10) : DEFAULT_HOTSPOT_PORT;
       return {
         hostIp: ip,
         port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
         sessionCode: code?.toUpperCase(),
+        ssid,
+        password,
       };
     } catch {
       return null;
@@ -74,6 +82,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
   const [hostIp, setHostIp] = useState('192.168.43.1');
   const [port, setPort] = useState(String(DEFAULT_HOTSPOT_PORT));
   const [sessionCode, setSessionCode] = useState('');
+  const [wifiCredentials, setWifiCredentials] = useState<{ ssid: string; password: string } | undefined>();
   const [qrInput, setQrInput] = useState('');
   const [qrFeedback, setQrFeedback] = useState<string | null>(null);
 
@@ -83,7 +92,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
     if (!parsed) {
       setQrFeedback(
         value.trim()
-          ? 'Format QR non reconnu (attendu : OWBELOTY|IP|PORT|CODE).'
+          ? 'Format QR non reconnu (attendu : invitation OW’Beloty).'
           : null,
       );
       return;
@@ -91,13 +100,14 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
     if (parsed.hostIp) setHostIp(parsed.hostIp);
     if (parsed.port) setPort(String(parsed.port));
     if (parsed.sessionCode) setSessionCode(parsed.sessionCode);
+    if (parsed.ssid && parsed.password) setWifiCredentials({ ssid: parsed.ssid, password: parsed.password });
     setQrFeedback('Paramètres extraits du code QR OW’Beloty.');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericPort = Number.parseInt(port, 10) || DEFAULT_HOTSPOT_PORT;
-    onConnectToHost(hostIp.trim(), numericPort, sessionCode.trim().toUpperCase());
+    onConnectToHost(hostIp.trim(), numericPort, sessionCode.trim().toUpperCase(), wifiCredentials);
   };
 
   const isConnecting = clientState?.phase === 'CONNEXION';
@@ -230,11 +240,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
                   Connexion au téléphone hôte (Hotspot Wi-Fi)
                 </h2>
                 <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                  1. Connectez ce téléphone au Hotspot Wi-Fi activé par le joueur
-                  hôte.
-                  <br />
-                  2. Saisissez l’adresse IP, le port et le code session affichés sur
-                  l’écran de l’hôte (ou collez le code QR texte).
+                  Collez le code d’invitation fourni par l’hôte. Si le code contient les identifiants Wi-Fi, OW’Beloty demandera à Android de rejoindre automatiquement le réseau ; une confirmation système peut apparaître.
                 </p>
               </div>
             </div>
@@ -253,7 +259,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
                 type="text"
                 value={qrInput}
                 onChange={(e) => handleApplyQrText(e.target.value)}
-                placeholder="OWBELOTY|192.168.43.1|7432|OWB-XXXX"
+                placeholder="OWBELOTY|IP|7432|CODE|SSID|MOT_DE_PASSE"
                 className="min-h-[44px] px-3.5 rounded-xl bg-[#04190F] border border-white/15 text-xs font-mono text-[#F7F4EB] focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               {qrFeedback && (
@@ -334,7 +340,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
               <span>
                 {isConnecting
                   ? 'Connexion au salon Hotspot...'
-                  : 'Rejoindre le salon'}
+                  : wifiCredentials ? 'Rejoindre le réseau et le salon' : 'Rejoindre le salon'}
               </span>
             </button>
           </form>
