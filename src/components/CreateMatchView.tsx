@@ -206,7 +206,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     Héberger sur Hotspot Wi-Fi local
                   </h2>
                   <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                    OW’Beloty demande à Android de créer automatiquement un réseau Wi-Fi local (sans Internet). Les autres joueurs scannent ou collent le code d’invitation ; Android leur demandera ensuite l’autorisation de rejoindre ce réseau.
+                    OW’Beloty demande à Android de créer automatiquement un réseau Wi-Fi local (sans Internet). Les autres joueurs lisent ou collent le code d’invitation ; Android leur demandera ensuite l’autorisation de rejoindre ce réseau.
                   </p>
                 </div>
               </div>
