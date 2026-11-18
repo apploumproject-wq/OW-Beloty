@@ -1,6 +1,7 @@
 package com.owbeloty.app;
 
 import android.util.Base64;
+import android.Manifest;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -18,6 +19,8 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.PermissionState;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -41,7 +44,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@CapacitorPlugin(name = "LocalHotspot")
+@CapacitorPlugin(name = "LocalHotspot", permissions = {
+    @Permission(alias = "location", strings = { Manifest.permission.ACCESS_FINE_LOCATION }),
+    @Permission(alias = "nearbyWifi", strings = { Manifest.permission.NEARBY_WIFI_DEVICES })
+})
 public class LocalHotspotPlugin extends Plugin {
 
     private static final String WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -109,6 +115,27 @@ public class LocalHotspotPlugin extends Plugin {
 
     @PluginMethod
     public void startManagedHotspot(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= 33 && getPermissionState("nearbyWifi") != PermissionState.GRANTED) {
+            requestPermissionForAlias("nearbyWifi", call, "startManagedHotspotPermissionResult");
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 33 && getPermissionState("location") != PermissionState.GRANTED) {
+            requestPermissionForAlias("location", call, "startManagedHotspotPermissionResult");
+            return;
+        }
+        startManagedHotspotInternal(call);
+    }
+
+    @PermissionCallback
+    private void startManagedHotspotPermissionResult(PluginCall call) {
+        boolean granted = Build.VERSION.SDK_INT >= 33
+            ? getPermissionState("nearbyWifi") == PermissionState.GRANTED
+            : getPermissionState("location") == PermissionState.GRANTED;
+        if (!granted) { call.reject("L’autorisation Android pour le Wi-Fi à proximité est nécessaire."); return; }
+        startManagedHotspotInternal(call);
+    }
+
+    private void startManagedHotspotInternal(PluginCall call) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             call.reject("Le hotspot automatique nécessite Android 8.0 ou supérieur.");
             return;
@@ -173,6 +200,27 @@ public class LocalHotspotPlugin extends Plugin {
 
     @PluginMethod
     public void connectToManagedHotspot(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= 33 && getPermissionState("nearbyWifi") != PermissionState.GRANTED) {
+            requestPermissionForAlias("nearbyWifi", call, "connectToManagedHotspotPermissionResult");
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 33 && getPermissionState("location") != PermissionState.GRANTED) {
+            requestPermissionForAlias("location", call, "connectToManagedHotspotPermissionResult");
+            return;
+        }
+        connectToManagedHotspotInternal(call);
+    }
+
+    @PermissionCallback
+    private void connectToManagedHotspotPermissionResult(PluginCall call) {
+        boolean granted = Build.VERSION.SDK_INT >= 33
+            ? getPermissionState("nearbyWifi") == PermissionState.GRANTED
+            : getPermissionState("location") == PermissionState.GRANTED;
+        if (!granted) { call.reject("L’autorisation Android pour le Wi-Fi à proximité est nécessaire."); return; }
+        connectToManagedHotspotInternal(call);
+    }
+
+    private void connectToManagedHotspotInternal(PluginCall call) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             call.reject("La connexion Wi-Fi assistée nécessite Android 10 ou supérieur. Connectez-vous depuis les paramètres Wi-Fi.");
             return;
