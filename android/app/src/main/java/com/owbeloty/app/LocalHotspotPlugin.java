@@ -400,41 +400,51 @@ public class LocalHotspotPlugin extends Plugin {
     }
 
     private static List<String> detectLocalIpv4Addresses() {
-        List<String> prioritized = new ArrayList<>();
+        List<String> hotspot = new ArrayList<>();
+        List<String> wifi = new ArrayList<>();
         List<String> others = new ArrayList<>();
         try {
             Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
             for (NetworkInterface nif : Collections.list(ifaces)) {
                 if (!nif.isUp() || nif.isLoopback()) continue;
-                String name = nif.getName().toLowerCase();
-                boolean isHotspotOrWifi =
-                    name.contains("ap") || name.contains("wlan") || name.contains("swlan");
+                String name = nif.getName().toLowerCase(java.util.Locale.ROOT);
+                boolean isHotspot = name.startsWith("ap") || name.startsWith("swlan")
+                    || name.contains("softap") || name.startsWith("wlan1");
+                boolean isWifi = name.startsWith("wlan") || name.startsWith("wifi");
                 for (InetAddress addr : Collections.list(nif.getInetAddresses())) {
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
                         String host = addr.getHostAddress();
-                        if (host == null) continue;
-                        if (isHotspotOrWifi) {
-                            prioritized.add(host);
-                        } else {
-                            others.add(host);
-                        }
+                        if (host == null || host.startsWith("169.254.")) continue;
+                        if (isHotspot) hotspot.add(host);
+                        else if (isWifi) wifi.add(host);
+                        else others.add(host);
                     }
                 }
             }
         } catch (Exception ignored) {
         }
-        prioritized.addAll(others);
-        return prioritized;
+        List<String> ordered = new ArrayList<>();
+        ordered.addAll(hotspot);
+        ordered.addAll(wifi);
+        ordered.addAll(others);
+        return ordered;
     }
 
     private static String pickPreferredHotspotIp(List<String> ips) {
+        // L'adresse du point d'accès Android est généralement la passerelle .1.
         for (String ip : ips) {
             if (ip.equals("192.168.43.1")) return ip;
         }
         for (String ip : ips) {
+            if (ip.startsWith("192.168.") && ip.endsWith(".1")) return ip;
+        }
+        for (String ip : ips) {
+            if (ip.startsWith("10.") && ip.endsWith(".1")) return ip;
+            if (ip.matches("172\\.(1[6-9]|2[0-9]|3[0-1])\\..*\\.1")) return ip;
+        }
+        for (String ip : ips) {
             if (ip.startsWith("192.168.")) return ip;
         }
-        if (!ips.isEmpty()) return ips.get(0);
-        return "192.168.43.1";
+        return ips.isEmpty() ? "192.168.43.1" : ips.get(0);
     }
 }
