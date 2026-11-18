@@ -252,7 +252,7 @@ export default function App() {
       });
 
       localHotspotAdapter.setStatus('SERVEUR_ACTIF');
-      setHostIp(wifi.hostIp || result.hostIp || '192.168.49.1');
+      setHostIp(result.hostIp || wifi.hostIp || '192.168.49.1');
       setHostSession(session);
     } catch (err) {
       if (isNativeAndroidEnvironment()) {
