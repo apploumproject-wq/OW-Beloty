@@ -1,6 +1,17 @@
 package com.owbeloty.app;
 
 import android.util.Base64;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiNetworkSpecifier;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -39,6 +50,9 @@ public class LocalHotspotPlugin extends Plugin {
     private ExecutorService executor;
     private volatile boolean running = false;
     private final Map<String, ClientConnection> clients = new ConcurrentHashMap<>();
+    private WifiManager.LocalOnlyHotspotReservation hotspotReservation;
+    private ConnectivityManager.NetworkCallback wifiNetworkCallback;
+    private ConnectivityManager connectivityManager;
 
     private static class ClientConnection {
         final String clientId;
@@ -90,6 +104,127 @@ public class LocalHotspotPlugin extends Plugin {
             } catch (IOException ignored) {
             }
         }
+    }
+
+
+    @PluginMethod
+    public void startManagedHotspot(PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            call.reject("Le hotspot automatique nécessite Android 8.0 ou supérieur.");
+            return;
+        }
+        if (hotspotReservation != null) {
+            call.resolve(buildManagedHotspotResult());
+            return;
+        }
+        WifiManager wifi = (WifiManager) getContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifi == null) { call.reject("Service Wi-Fi indisponible."); return; }
+        new Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                wifi.startLocalOnlyHotspot(new WifiManager.LocalOnlyHotspotCallback() {
+                    @Override public void onStarted(WifiManager.LocalOnlyHotspotReservation reservation) {
+                        hotspotReservation = reservation;
+                        call.resolve(buildManagedHotspotResult());
+                    }
+                    @Override public void onFailed(int reason) {
+                        call.reject("Android n'a pas pu démarrer le réseau Wi-Fi local (code " + reason + ").");
+                    }
+                }, new Handler(Looper.getMainLooper()));
+            } catch (Exception e) { call.reject("Impossible de démarrer le réseau Wi-Fi local : " + e.getMessage()); }
+        });
+    }
+
+    private JSObject buildManagedHotspotResult() {
+        JSObject result = new JSObject();
+        result.put("started", hotspotReservation != null);
+        String ssid = "";
+        String password = "";
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.net.wifi.SoftApConfiguration config = hotspotReservation.getSoftApConfiguration();
+                ssid = config.getSsid();
+                password = config.getPassphrase();
+            } else {
+                android.net.wifi.WifiConfiguration config = hotspotReservation.getWifiConfiguration();
+                if (config != null) {
+                    ssid = config.SSID == null ? "" : config.SSID.replace("\"", "");
+                    password = config.preSharedKey == null ? "" : config.preSharedKey.replace("\"", "");
+                }
+            }
+        } catch (Exception ignored) { }
+        result.put("ssid", ssid);
+        result.put("password", password);
+        List<String> ips = detectLocalIpv4Addresses();
+        result.put("hostIp", pickPreferredHotspotIp(ips));
+        JSArray addresses = new JSArray();
+        for (String ip : ips) addresses.put(ip);
+        result.put("ipv4Addresses", addresses);
+        return result;
+    }
+
+    @PluginMethod
+    public void stopManagedHotspot(PluginCall call) {
+        if (hotspotReservation != null) {
+            try { hotspotReservation.close(); } catch (Exception ignored) { }
+            hotspotReservation = null;
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void connectToManagedHotspot(PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            call.reject("La connexion Wi-Fi assistée nécessite Android 10 ou supérieur. Connectez-vous depuis les paramètres Wi-Fi.");
+            return;
+        }
+        String ssid = call.getString("ssid");
+        String password = call.getString("password");
+        if (TextUtils.isEmpty(ssid) || TextUtils.isEmpty(password)) {
+            call.reject("Identifiants du réseau Wi-Fi manquants.");
+            return;
+        }
+        disconnectManagedHotspotInternal();
+        WifiNetworkSpecifier specifier = new WifiNetworkSpecifier.Builder()
+            .setSsid(ssid).setWpa2Passphrase(password).build();
+        NetworkRequest request = new NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .setNetworkSpecifier(specifier).build();
+        connectivityManager = (ConnectivityManager) getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) { call.reject("Service de connectivité indisponible."); return; }
+        wifiNetworkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override public void onAvailable(Network network) {
+                connectivityManager.bindProcessToNetwork(network);
+                JSObject result = new JSObject();
+                result.put("connected", true);
+                call.resolve(result);
+            }
+            @Override public void onUnavailable() {
+                call.reject("Connexion au réseau Wi-Fi annulée ou impossible.");
+                disconnectManagedHotspotInternal();
+            }
+        };
+        try { connectivityManager.requestNetwork(request, wifiNetworkCallback); }
+        catch (Exception e) {
+            call.reject("Impossible de demander la connexion Wi-Fi : " + e.getMessage());
+            disconnectManagedHotspotInternal();
+        }
+    }
+
+    @PluginMethod
+    public void disconnectManagedHotspot(PluginCall call) {
+        disconnectManagedHotspotInternal();
+        call.resolve();
+    }
+
+    private void disconnectManagedHotspotInternal() {
+        if (connectivityManager != null && wifiNetworkCallback != null) {
+            try { connectivityManager.unregisterNetworkCallback(wifiNetworkCallback); } catch (Exception ignored) { }
+        }
+        if (connectivityManager != null) {
+            try { connectivityManager.bindProcessToNetwork(null); } catch (Exception ignored) { }
+        }
+        wifiNetworkCallback = null;
     }
 
     @PluginMethod
@@ -203,6 +338,8 @@ public class LocalHotspotPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         stopServerInternal();
+        if (hotspotReservation != null) { try { hotspotReservation.close(); } catch (Exception ignored) { } hotspotReservation = null; }
+        disconnectManagedHotspotInternal();
         super.handleOnDestroy();
     }
 
@@ -340,6 +477,13 @@ public class LocalHotspotPlugin extends Plugin {
                 if (fin) {
                     String text = new String(fragmentedBuffer.toByteArray(), StandardCharsets.UTF_8);
                     fragmentedBuffer.reset();
+                    try {
+                        org.json.JSONObject json = new org.json.JSONObject(text);
+                        if ("PING".equals(json.optString("type"))) {
+                            conn.sendTextFrame("{\"type\":\"PONG\",\"payload\":{}} ".trim());
+                            continue;
+                        }
+                    } catch (org.json.JSONException ignored) { }
                     JSObject msgEv = new JSObject();
                     msgEv.put("clientId", clientId);
                     msgEv.put("payload", text);
