@@ -206,7 +206,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     Héberger sur Hotspot Wi-Fi local
                   </h2>
                   <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                    OW’Beloty demande à Android de créer automatiquement un réseau Wi-Fi local (sans Internet). Les autres joueurs lisent ou collent le code d’invitation ; Android leur demandera ensuite l’autorisation de rejoindre ce réseau.
+                    Le téléphone qui crée la room devient l’hôte. Les trois autres téléphones ouvrent « Rejoindre une partie », scannent ce QR code et acceptent la demande Wi-Fi Android. Aucun accès Internet n’est nécessaire.
                   </p>
                 </div>
               </div>
@@ -281,10 +281,15 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                   {/* Coordonnées de connexion + QR Code */}
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-center rounded-2xl bg-[#04190F] border border-amber-300/25 p-4">
                     <div className="flex flex-col gap-2 text-sm tabular-nums">
-                      {managedWifi && <div className="text-xs text-emerald-100/80">Réseau Wi-Fi : <strong className="text-[#F7F4EB]">{managedWifi.ssid}</strong></div>}
+                      {managedWifi && (
+                        <>
+                          <div className="text-xs text-emerald-100/80">Réseau Wi-Fi : <strong className="text-[#F7F4EB]">{managedWifi.ssid}</strong></div>
+                          <div className="text-xs text-emerald-100/80">Mot de passe de secours : <strong className="text-[#F7F4EB] font-mono select-all">{managedWifi.password}</strong></div>
+                        </>
+                      )}
                       <div className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
                         <QrCode className="w-4 h-4" />
-                        <span>Identifiants de connexion locale</span>
+                        <span>Invitation à scanner sur les 3 autres téléphones</span>
                       </div>
                       <div className="flex items-center justify-between gap-2 py-1 border-b border-white/10">
                         <span className="text-emerald-100/70">Adresse IP</span>
@@ -326,10 +331,21 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                           className="w-36 h-36 rounded-xl border-2 border-amber-300/40 bg-[#FCFBF7]"
                         />
                         <span className="text-[11px] text-emerald-100/70">
-                          Code QR OW’Beloty
+                          À scanner depuis « Rejoindre »
                         </span>
                       </div>
                     )}
+                  </div>
+
+                  <div className="rounded-xl bg-emerald-950/60 border border-emerald-400/20 p-3.5 text-xs sm:text-sm text-emerald-50 leading-relaxed">
+                    <strong className="text-amber-300">Comment connecter les 4 joueurs ?</strong>
+                    <ol className="list-decimal pl-5 mt-2 space-y-1">
+                      <li>Laissez cette room ouverte sur le téléphone hôte.</li>
+                      <li>Sur chacun des 3 autres téléphones, ouvrez OW’Beloty puis « Rejoindre une partie ».</li>
+                      <li>Appuyez sur « Scanner le QR code de l’hôte » et visez ce code.</li>
+                      <li>Acceptez la demande de connexion Wi-Fi affichée par Android.</li>
+                      <li>Quand le compteur indique 4/4, l’hôte peut lancer la partie.</li>
+                    </ol>
                   </div>
 
                   {/* Salle d'attente 4 joueurs */}
