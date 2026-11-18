@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Bot,
   ChevronRight,
+  Info,
   Play,
   PlusCircle,
   Settings,
@@ -18,7 +19,8 @@ export type ScreenRoute =
   | 'REJOINDRE_PARTIE'
   | 'CONTRE_ORDI'
   | 'PROFIL'
-  | 'PARAMETRES';
+  | 'PARAMETRES'
+  | 'A_PROPOS';
 
 interface HomeMenuProps {
   profile: PlayerProfile;
@@ -64,8 +66,14 @@ export const HomeMenu: React.FC<HomeMenuProps> = ({
     {
       route: 'PARAMETRES',
       title: 'Paramètres',
-      subtitle: 'Sens de jeu, règles OW’Beloty et tests moteur',
+      subtitle: 'Sens de jeu et règles OW’Beloty',
       icon: <Settings className="w-5 h-5 text-emerald-200" />,
+    },
+    {
+      route: 'A_PROPOS',
+      title: 'À propos',
+      subtitle: 'Informations sur OW’Beloty et AppLoumProject',
+      icon: <Info className="w-5 h-5 text-emerald-200" />,
     },
   ];
 
