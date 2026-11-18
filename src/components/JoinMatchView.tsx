@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BarcodeFormat, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import {
   AlertCircle,
   CheckCircle2,
@@ -85,6 +86,7 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
   const [wifiCredentials, setWifiCredentials] = useState<{ ssid: string; password: string } | undefined>();
   const [qrInput, setQrInput] = useState('');
   const [qrFeedback, setQrFeedback] = useState<string | null>(null);
+  const [isScanningQr, setIsScanningQr] = useState(false);
 
   const handleApplyQrText = (value: string) => {
     setQrInput(value);
@@ -102,6 +104,43 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
     if (parsed.sessionCode) setSessionCode(parsed.sessionCode);
     if (parsed.ssid && parsed.password) setWifiCredentials({ ssid: parsed.ssid, password: parsed.password });
     setQrFeedback('Paramètres extraits du code QR OW’Beloty.');
+  };
+
+  const handleScanQr = async () => {
+    let listener: Awaited<ReturnType<typeof BarcodeScanner.addListener>> | null = null;
+    try {
+      const permission = await BarcodeScanner.requestPermissions();
+      if (permission.camera !== 'granted') {
+        setQrFeedback("L’autorisation d’utiliser la caméra est nécessaire pour scanner l’invitation.");
+        return;
+      }
+
+      setIsScanningQr(true);
+      document.body.classList.add('barcode-scanner-active');
+      listener = await BarcodeScanner.addListener('barcodesScanned', async ({ barcodes }) => {
+        const value = barcodes.find((barcode) => barcode.rawValue)?.rawValue;
+        if (!value) return;
+        await listener?.remove();
+        listener = null;
+        await BarcodeScanner.stopScan();
+        document.body.classList.remove('barcode-scanner-active');
+        setIsScanningQr(false);
+        handleApplyQrText(value);
+      });
+      await BarcodeScanner.startScan({ formats: [BarcodeFormat.QrCode] });
+    } catch (error) {
+      await listener?.remove();
+      try { await BarcodeScanner.stopScan(); } catch { /* scanner déjà arrêté */ }
+      document.body.classList.remove('barcode-scanner-active');
+      setIsScanningQr(false);
+      setQrFeedback(error instanceof Error ? error.message : "Impossible d’ouvrir le scanner QR.");
+    }
+  };
+
+  const handleCancelQrScan = async () => {
+    try { await BarcodeScanner.stopScan(); } catch { /* scanner déjà arrêté */ }
+    document.body.classList.remove('barcode-scanner-active');
+    setIsScanningQr(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -240,19 +279,28 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
                   Connexion au téléphone hôte (Hotspot Wi-Fi)
                 </h2>
                 <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                  Collez le code d’invitation fourni par l’hôte. Si le code contient les identifiants Wi-Fi, OW’Beloty demandera à Android de rejoindre automatiquement le réseau ; une confirmation système peut apparaître.
+                  Sur ce téléphone, appuyez sur « Scanner le QR code » puis visez le code affiché sur le téléphone de l’hôte. OW’Beloty récupère les informations et demande à Android de rejoindre le Wi-Fi ; confirmez la fenêtre Android si elle apparaît.
                 </p>
               </div>
             </div>
 
-            {/* Import rapide par texte QR */}
+            <button
+              type="button"
+              onClick={() => void handleScanQr()}
+              className="w-full min-h-[54px] px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#062114] font-bold text-base flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+            >
+              <QrCode className="w-5 h-5" />
+              Scanner le QR code de l’hôte
+            </button>
+
+            {/* Import manuel de secours */}
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="qr-paste-input"
                 className="text-xs font-medium text-emerald-100/80 flex items-center gap-1.5"
               >
                 <QrCode className="w-3.5 h-3.5 text-amber-300" />
-                <span>Importer un code QR OW’Beloty (optionnel)</span>
+                <span>Ou coller manuellement le code d’invitation</span>
               </label>
               <input
                 id="qr-paste-input"
@@ -346,6 +394,19 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
           </form>
         )}
       </main>
+      {isScanningQr && (
+        <div className="qr-scanner-modal">
+          <div className="w-full max-w-sm rounded-2xl bg-[#062114]/95 border border-amber-300/40 p-5 text-center shadow-2xl">
+            <QrCode className="w-9 h-9 text-amber-300 mx-auto mb-2" />
+            <h2 className="text-lg font-bold text-[#F7F4EB]">Scanner l’invitation OW’Beloty</h2>
+            <p className="text-sm text-emerald-100/80 mt-1">Placez le QR code de l’hôte dans le cadre de la caméra.</p>
+            <button type="button" onClick={() => void handleCancelQrScan()} className="mt-4 min-h-[44px] px-5 rounded-xl bg-white/15 text-white font-semibold">
+              Annuler le scan
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
