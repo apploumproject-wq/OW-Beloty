@@ -6,6 +6,8 @@ export interface LocalNetworkInfoResult {
   isNativeAndroid: boolean;
 }
 
+export interface ManagedHotspotResult { started: boolean; ssid: string; password: string; hostIp: string; ipv4Addresses: string[]; }
+
 export interface StartHostServerOptions {
   port: number;
   sessionCode: string;
@@ -20,6 +22,10 @@ export interface StartHostServerResult {
 
 export interface LocalHotspotPluginInterface {
   getLocalNetworkInfo(): Promise<LocalNetworkInfoResult>;
+  startManagedHotspot(): Promise<ManagedHotspotResult>;
+  stopManagedHotspot(): Promise<void>;
+  connectToManagedHotspot(options: { ssid: string; password: string }): Promise<{ connected: boolean }>;
+  disconnectManagedHotspot(): Promise<void>;
   startHostServer(options: StartHostServerOptions): Promise<StartHostServerResult>;
   stopHostServer(): Promise<void>;
   sendToClient(options: { clientId: string; payload: string }): Promise<void>;
