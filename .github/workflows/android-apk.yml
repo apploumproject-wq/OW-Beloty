@@ -34,16 +34,21 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Installer les composants Android SDK
+      - name: Repérer et installer Android SDK
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager introuvable dans $ANDROID_HOME/cmdline-tools"
+            find "$ANDROID_HOME" -maxdepth 4 -type f -name sdkmanager 2>/dev/null || true
+            exit 1
+          fi
+          echo "SDKMANAGER=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Installer les dépendances
         run: bun install --frozen-lockfile
-
-      - name: Installer Android 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Tester le projet
         run: bun run test
