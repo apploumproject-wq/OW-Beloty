@@ -110,6 +110,7 @@ export default function App() {
       clientSessionRef.current.disconnect();
       clientSessionRef.current = null;
     }
+    if (isNativeAndroidEnvironment()) void NativeLocalHotspot.disconnectManagedHotspot().catch(() => {});
     setClientState(null);
   }, []);
 
@@ -292,7 +293,7 @@ export default function App() {
         await NativeLocalHotspot.connectToManagedHotspot(wifi);
       }
     } catch (err) {
-      setClientState({ phase: 'ERREUR', errorMessage: err instanceof Error ? err.message : 'Connexion Wi-Fi impossible.' } as ClientSessionState);
+      setClientState({ phase: 'ERREUR', sessionCode: targetCode, mySeat: null, turnDirection: 'ANTI_HORAIRE', lobbyPlayers: [], matchState: null, errorMessage: err instanceof Error ? err.message : 'Connexion Wi-Fi impossible.', noticeMessage: null });
       return;
     }
     lastClientTargetRef.current = {
@@ -461,6 +462,7 @@ export default function App() {
         defaultTurnDirection={settings.turnDirection}
         hostSession={hostSession}
         hostIp={hostIp}
+        managedWifi={managedWifi}
         hostServerError={hostError}
         isStartingServer={isStartingHostServer}
         onStartHotspotHost={handleStartHotspotHost}
