@@ -1,8 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { CheckCircle2, AlertTriangle, Play, Volume2, VolumeX } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { CheckCircle2, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import { OWBELOTY_RULES_SPEC } from '../engine/rulesStatus';
-import { runPart2Tests } from '../engine/part2.test';
-import { runAllEngineTests, TestCaseResult } from '../engine/scoring.test';
 import { AppSettings } from '../types/game';
 import { SubPageHeader } from './SubPageHeader';
 
@@ -17,8 +15,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateSettings,
   onBack,
 }) => {
-  const [testResults, setTestResults] = useState<TestCaseResult[] | null>(null);
-
   const confirmedRules = useMemo(
     () => OWBELOTY_RULES_SPEC.filter((r) => r.status === 'CONFIRMEE'),
     [],
@@ -27,12 +23,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     () => OWBELOTY_RULES_SPEC.filter((r) => r.status === 'A_CONFIRMER'),
     [],
   );
-
-  const handleRunTests = () => {
-    setTestResults([...runAllEngineTests(), ...runPart2Tests()]);
-  };
-
-  const passedCount = testResults?.filter((t) => t.passed).length ?? 0;
 
   return (
     <div className="min-h-dvh flex flex-col felt-surface">
@@ -236,52 +226,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </section>
         )}
 
-        {/* Suite de tests automatiques du moteur de score */}
-        <section className="rounded-2xl bg-black/25 border border-white/10 p-5 sm:p-6 flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-[#F7F4EB]">
-                Vérification automatique du moteur de score
-              </h2>
-              <p className="text-xs sm:text-sm text-emerald-100/70">
-                Vérifie les 6 contrats, les capots et les exceptions de contre/surcontre.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleRunTests}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#062114] text-sm font-bold flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Exécuter les tests</span>
-            </button>
-          </div>
-
-          {testResults && (
-            <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
-              <div className="text-sm font-semibold text-emerald-300 tabular-nums">
-                {passedCount} / {testResults.length} tests réussis
-              </div>
-              <div className="max-h-64 overflow-y-auto divide-y divide-white/10 text-xs">
-                {testResults.map((res, i) => (
-                  <div
-                    key={i}
-                    className="py-2 flex items-center justify-between gap-3"
-                  >
-                    <span className="text-emerald-50/90">{res.name}</span>
-                    <span
-                      className={`font-mono font-semibold shrink-0 ${
-                        res.passed ? 'text-emerald-400' : 'text-red-400'
-                      }`}
-                    >
-                      {res.passed ? 'OK' : `ÉCHEC (${res.details})`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
       </main>
     </div>
   );
