@@ -45,3 +45,25 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Le scanner ML Kit affiche la caméra derrière la WebView. */
+body.barcode-scanner-active * {
+  visibility: hidden;
+}
+
+body.barcode-scanner-active .qr-scanner-modal,
+body.barcode-scanner-active .qr-scanner-modal * {
+  visibility: visible;
+}
+
+body.barcode-scanner-active .qr-scanner-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(transparent 35%, rgba(0, 0, 0, 0.72));
+}
