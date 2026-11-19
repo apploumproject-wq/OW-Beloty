@@ -1,5 +1,7 @@
 package com.owbeloty.app;
 
+import android.content.Intent;
+import android.provider.Settings;
 import android.util.Base64;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -92,6 +94,25 @@ public class LocalHotspotPlugin extends Plugin {
         }
     }
 
+
+    @PluginMethod
+    public void openHotspotSettings(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_TETHER_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getActivity().startActivity(intent);
+        } catch (Exception firstError) {
+            try {
+                Intent fallback = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getActivity().startActivity(fallback);
+            } catch (Exception secondError) {
+                call.reject("Impossible d'ouvrir les paramètres du point d'accès Wi-Fi", secondError);
+                return;
+            }
+        }
+        call.resolve();
+    }
 
     @PluginMethod
     public void getLocalNetworkInfo(PluginCall call) {
