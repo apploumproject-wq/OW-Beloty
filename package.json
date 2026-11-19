@@ -27,8 +27,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^8.3.0",
-    "@capacitor-mlkit/barcode-scanning": "^8.2.2"
+    "vite": "^8.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
