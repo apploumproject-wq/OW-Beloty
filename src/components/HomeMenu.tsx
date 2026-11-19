@@ -6,6 +6,7 @@ import {
   Play,
   PlusCircle,
   Settings,
+  Trophy,
   User,
   Users,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ export type ScreenRoute =
   | 'CREER_PARTIE'
   | 'REJOINDRE_PARTIE'
   | 'CONTRE_ORDI'
+  | 'STATISTIQUES'
   | 'PROFIL'
   | 'PARAMETRES'
   | 'A_PROPOS';
@@ -56,6 +58,12 @@ export const HomeMenu: React.FC<HomeMenuProps> = ({
       title: "Jouer contre l'ordinateur",
       subtitle: 'Mode Solo hors ligne contre trois IA',
       icon: <Bot className="w-5 h-5 text-emerald-200" />,
+    },
+    {
+      route: 'STATISTIQUES',
+      title: 'Statistiques',
+      subtitle: 'Victoires et défaites en Solo et en équipe',
+      icon: <Trophy className="w-5 h-5 text-amber-300" />,
     },
     {
       route: 'PROFIL',
