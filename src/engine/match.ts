@@ -102,7 +102,7 @@ export function createNewMatch(
   const dealt = dealInitialFiveCards(basePlayers, firstAnnouncerSeat, sortBySuit);
 
   return {
-    matchId: `match-${Date.now()}`,
+    matchId: `match-${typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`}`,
     roundNumber: 1,
     phase: 'ENCHERES',
     turnDirection,
