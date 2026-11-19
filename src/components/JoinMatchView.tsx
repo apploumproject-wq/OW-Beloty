@@ -21,6 +21,47 @@ interface JoinMatchViewProps {
   onBack: () => void;
 }
 
+export function parseOwBelotyInviteText(raw: string): {
+  hostIp?: string;
+  port?: number;
+  sessionCode?: string;
+} | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.toUpperCase().startsWith('OWBELOTY|')) {
+    const parts = trimmed.split('|');
+    if (parts.length >= 4) {
+      const parsedPort = Number.parseInt(parts[2], 10);
+      return {
+        hostIp: parts[1].trim(),
+        port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
+        sessionCode: parts[3].trim().toUpperCase(),
+      };
+    }
+  }
+
+  if (trimmed.toLowerCase().startsWith('owbeloty://')) {
+    try {
+      const normalized = trimmed.replace(/^owbeloty:\/\//i, 'http://');
+      const url = new URL(normalized);
+      const ip = url.searchParams.get('ip') ?? undefined;
+      const portStr = url.searchParams.get('port');
+      const code = url.searchParams.get('code') ?? undefined;
+      const parsedPort = portStr ? Number.parseInt(portStr, 10) : DEFAULT_HOTSPOT_PORT;
+      return {
+        hostIp: ip,
+        port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
+        sessionCode: code?.toUpperCase(),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
   localProfile,
   clientState,
