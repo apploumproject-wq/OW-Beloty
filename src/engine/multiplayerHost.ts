@@ -135,7 +135,9 @@ export class MultiplayerHostSession {
   }
 
   getConnectedCount(): number {
-    return this.getLobbyPlayers().filter((s) => s.profile !== null && s.connected).length;
+    return this.twoPlayerMode
+      ? [this.slots.SUD, this.slots.NORD].filter((s) => s.profile !== null && s.connected).length
+      : this.getLobbyPlayers().filter((s) => s.profile !== null && s.connected).length;
   }
 
   getOccupiedCount(): number {
