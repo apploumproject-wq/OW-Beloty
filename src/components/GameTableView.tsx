@@ -722,10 +722,10 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
         </div>
 
         {/* ZONE BASSE : Enchères OU Main tactile du joueur */}
-        <section className="pb-safe flex flex-col gap-1.5">
+        <section className="pb-safe flex flex-col gap-1">
           {match.phase === 'ENCHERES' && (
-            <div className="rounded-2xl bg-black/40 border border-white/15 p-2 sm:p-3 flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-100/80">
+            <div className="rounded-2xl bg-black/40 border border-white/15 p-1.5 sm:p-2 flex flex-col gap-1">
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] sm:text-[11px] text-emerald-100/80">
                 <span>
                   {canActInBidding
                     ? activeSeat === match.firstAnnouncerSeat && !match.activeContract
@@ -740,7 +740,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
                 {CONTRACT_OPTIONS.map((opt) => {
                   const isRed = opt.type === 'CARREAU' || opt.type === 'COEUR';
                   const isAlreadyActive = match.activeContract === opt.type;
@@ -762,14 +762,14 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                           contract: opt.type as ContractType,
                         })
                       }
-                      className={`min-h-[44px] px-1.5 py-1 rounded-xl border text-xs sm:text-sm font-semibold flex flex-col items-center justify-center leading-tight transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      className={`min-h-[34px] px-1 py-0.5 rounded-lg border text-[10px] sm:text-xs font-semibold flex flex-col items-center justify-center leading-tight transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                         isAlreadyActive
                           ? 'bg-amber-400 text-[#062114] border-amber-300'
                           : 'bg-[#FCFBF7] hover:bg-amber-50 border-stone-300'
                       }`}
                     >
                       <span
-                        className={`text-base font-bold ${
+                        className={`text-sm font-bold leading-none ${
                           isAlreadyActive
                             ? 'text-[#062114]'
                             : isRed
@@ -780,7 +780,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                         {opt.symbol}
                       </span>
                       <span
-                        className={`text-[11px] truncate max-w-full ${
+                        className={`text-[9px] leading-none truncate max-w-full ${
                           isAlreadyActive ? 'text-[#062114]' : 'text-slate-800'
                         }`}
                       >
@@ -796,7 +796,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                   type="button"
                   disabled={!canPassInBidding}
                   onClick={() => handleBidAction({ kind: 'PASSE' })}
-                  className="flex-1 min-h-[42px] px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-sm font-semibold text-[#F7F4EB] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex-1 min-h-[34px] px-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold text-[#F7F4EB] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {!match.activeContract && activeSeat === match.firstAnnouncerSeat
                     ? 'Contrat obligatoire'
@@ -807,7 +807,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleBidAction({ kind: 'CONTRE' })}
-                    className="flex-1 min-h-[46px] px-4 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold text-white cursor-pointer"
+                    className="flex-1 min-h-[34px] px-2 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white cursor-pointer"
                   >
                     Contrer (× 2)
                   </button>
@@ -817,7 +817,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleBidAction({ kind: 'SURCONTRE' })}
-                    className="flex-1 min-h-[46px] px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-sm font-bold text-[#062114] cursor-pointer"
+                    className="flex-1 min-h-[34px] px-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-xs font-bold text-[#062114] cursor-pointer"
                   >
                     Surcontrer
                   </button>
