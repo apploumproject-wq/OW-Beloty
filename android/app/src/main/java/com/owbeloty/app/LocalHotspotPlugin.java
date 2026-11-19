@@ -56,8 +56,7 @@ public class LocalHotspotPlugin extends Plugin {
         synchronized void sendTextFrame(String text) throws IOException {
             byte[] payload = text.getBytes(StandardCharsets.UTF_8);
             ByteArrayOutputStream frame = new ByteArrayOutputStream();
-            frame.write(0x81); // FIN + Text frame
-
+            frame.write(0x81);
             if (payload.length <= 125) {
                 frame.write(payload.length);
             } else if (payload.length <= 65535) {
@@ -67,9 +66,7 @@ public class LocalHotspotPlugin extends Plugin {
             } else {
                 frame.write(127);
                 long len = payload.length;
-                for (int shift = 56; shift >= 0; shift -= 8) {
-                    frame.write((int) ((len >> shift) & 0xFF));
-                }
+                for (int shift = 56; shift >= 0; shift -= 8) frame.write((int) ((len >> shift) & 0xFF));
             }
             frame.write(payload);
             out.write(frame.toByteArray());
@@ -78,7 +75,7 @@ public class LocalHotspotPlugin extends Plugin {
 
         synchronized void sendPongFrame(byte[] payload) throws IOException {
             ByteArrayOutputStream frame = new ByteArrayOutputStream();
-            frame.write(0x8A); // FIN + Pong
+            frame.write(0x8A);
             int len = Math.min(payload.length, 125);
             frame.write(len);
             frame.write(payload, 0, len);
@@ -87,43 +84,28 @@ public class LocalHotspotPlugin extends Plugin {
         }
 
         void closeQuietly() {
-            try {
-                socket.close();
-            } catch (IOException ignored) {
-            }
+            try { socket.close(); } catch (IOException ignored) {}
         }
     }
 
-
     @PluginMethod
     public void openHotspotSettings(PluginCall call) {
-        Intent intent = new Intent(Settings.ACTION_TETHER_SETTINGS);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
+            Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             getActivity().startActivity(intent);
-        } catch (Exception firstError) {
-            try {
-                Intent fallback = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
-                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                getActivity().startActivity(fallback);
-            } catch (Exception secondError) {
-                call.reject("Impossible d'ouvrir les paramètres du point d'accès Wi-Fi", secondError);
-                return;
-            }
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Impossible d'ouvrir les paramètres Wi-Fi Android", error);
         }
-        call.resolve();
     }
 
     @PluginMethod
     public void getLocalNetworkInfo(PluginCall call) {
         List<String> ips = detectLocalIpv4Addresses();
         String preferred = pickPreferredHotspotIp(ips);
-
         JSArray arr = new JSArray();
-        for (String ip : ips) {
-            arr.put(ip);
-        }
-
+        for (String ip : ips) arr.put(ip);
         JSObject ret = new JSObject();
         ret.put("ipv4Addresses", arr);
         ret.put("preferredIp", preferred);
@@ -135,12 +117,10 @@ public class LocalHotspotPlugin extends Plugin {
     public void startHostServer(PluginCall call) {
         int port = call.getInt("port", 7432);
         stopServerInternal();
-
         try {
             serverSocket = new ServerSocket(port);
             running = true;
             executor = Executors.newCachedThreadPool();
-
             executor.submit(() -> {
                 while (running && serverSocket != null && !serverSocket.isClosed()) {
                     try {
@@ -156,19 +136,13 @@ public class LocalHotspotPlugin extends Plugin {
                     }
                 }
             });
-
             List<String> ips = detectLocalIpv4Addresses();
-            String preferredIp = pickPreferredHotspotIp(ips);
-
             JSArray arr = new JSArray();
-            for (String ip : ips) {
-                arr.put(ip);
-            }
-
+            for (String ip : ips) arr.put(ip);
             JSObject ret = new JSObject();
             ret.put("started", true);
             ret.put("port", port);
-            ret.put("hostIp", preferredIp);
+            ret.put("hostIp", pickPreferredHotspotIp(ips));
             ret.put("ipv4Addresses", arr);
             call.resolve(ret);
         } catch (IOException e) {
@@ -192,10 +166,7 @@ public class LocalHotspotPlugin extends Plugin {
             return;
         }
         ClientConnection conn = clients.get(clientId);
-        if (conn == null) {
-            call.resolve();
-            return;
-        }
+        if (conn == null) { call.resolve(); return; }
         try {
             conn.sendTextFrame(payload);
             call.resolve();
@@ -208,16 +179,10 @@ public class LocalHotspotPlugin extends Plugin {
     @PluginMethod
     public void broadcast(PluginCall call) {
         String payload = call.getString("payload");
-        if (payload == null) {
-            call.reject("payload requis");
-            return;
-        }
+        if (payload == null) { call.reject("payload requis"); return; }
         for (Map.Entry<String, ClientConnection> entry : clients.entrySet()) {
-            try {
-                entry.getValue().sendTextFrame(payload);
-            } catch (IOException e) {
-                disconnectClient(entry.getKey());
-            }
+            try { entry.getValue().sendTextFrame(payload); }
+            catch (IOException e) { disconnectClient(entry.getKey()); }
         }
         call.resolve();
     }
@@ -230,19 +195,12 @@ public class LocalHotspotPlugin extends Plugin {
 
     private void stopServerInternal() {
         running = false;
-        for (ClientConnection conn : clients.values()) {
-            conn.closeQuietly();
-        }
+        for (ClientConnection conn : clients.values()) conn.closeQuietly();
         clients.clear();
-
         if (serverSocket != null) {
-            try {
-                serverSocket.close();
-            } catch (IOException ignored) {
-            }
+            try { serverSocket.close(); } catch (IOException ignored) {}
             serverSocket = null;
         }
-
         if (executor != null) {
             executor.shutdownNow();
             executor = null;
@@ -264,13 +222,8 @@ public class LocalHotspotPlugin extends Plugin {
         try {
             BufferedInputStream in = new BufferedInputStream(socket.getInputStream(), 16384);
             OutputStream out = socket.getOutputStream();
-
             String headers = readHttpHeaders(in);
-            if (headers == null) {
-                socket.close();
-                return;
-            }
-
+            if (headers == null) { socket.close(); return; }
             String wsKey = extractWebSocketKey(headers);
             if (wsKey == null) {
                 out.write("HTTP/1.1 400 Bad Request\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -278,24 +231,16 @@ public class LocalHotspotPlugin extends Plugin {
                 socket.close();
                 return;
             }
-
             String acceptKey = computeWebSocketAccept(wsKey);
-            String handshakeResponse =
-                "HTTP/1.1 101 Switching Protocols\r\n" +
-                "Upgrade: websocket\r\n" +
-                "Connection: Upgrade\r\n" +
-                "Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n";
+            String handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + acceptKey + "\r\n\r\n";
             out.write(handshakeResponse.getBytes(StandardCharsets.US_ASCII));
             out.flush();
-
             ClientConnection conn = new ClientConnection(clientId, socket, out);
             clients.put(clientId, conn);
-
             JSObject connectedEv = new JSObject();
             connectedEv.put("clientId", clientId);
             connectedEv.put("remoteAddress", String.valueOf(socket.getInetAddress().getHostAddress()));
             notifyListeners("clientConnected", connectedEv);
-
             readWebSocketLoop(clientId, conn, in);
         } catch (Exception ignored) {
         } finally {
@@ -305,21 +250,17 @@ public class LocalHotspotPlugin extends Plugin {
 
     private void readWebSocketLoop(String clientId, ClientConnection conn, InputStream in) throws IOException {
         ByteArrayOutputStream fragmentedBuffer = new ByteArrayOutputStream();
-
         while (running && !conn.socket.isClosed()) {
             int b1 = in.read();
             if (b1 == -1) break;
             int b2 = in.read();
             if (b2 == -1) break;
-
             boolean fin = (b1 & 0x80) != 0;
             int opcode = b1 & 0x0F;
             boolean masked = (b2 & 0x80) != 0;
             long payloadLen = b2 & 0x7F;
-
             if (payloadLen == 126) {
-                int h = in.read();
-                int l = in.read();
+                int h = in.read(), l = in.read();
                 if (h == -1 || l == -1) throw new EOFException();
                 payloadLen = ((h & 0xFF) << 8) | (l & 0xFF);
             } else if (payloadLen == 127) {
@@ -331,47 +272,30 @@ public class LocalHotspotPlugin extends Plugin {
                 }
                 payloadLen = len;
             }
-
-            if (payloadLen > 2_000_000) {
-                break; // Protection contre des trames surdimensionnées
-            }
-
+            if (payloadLen > 2_000_000) break;
             byte[] maskKey = new byte[4];
-            if (masked) {
-                readFully(in, maskKey, 4);
-            }
-
+            if (masked) readFully(in, maskKey, 4);
             byte[] payload = new byte[(int) payloadLen];
             readFully(in, payload, (int) payloadLen);
-
-            if (masked) {
-                for (int i = 0; i < payload.length; i++) {
-                    payload[i] = (byte) (payload[i] ^ maskKey[i % 4]);
-                }
-            }
-
-            if (opcode == 0x8) {
-                // Trame Close
-                break;
-            } else if (opcode == 0x9) {
-                // Ping -> Pong
+            if (masked) for (int i = 0; i < payload.length; i++) payload[i] = (byte) (payload[i] ^ maskKey[i % 4]);
+            if (opcode == 0x8) break;
+            if (opcode == 0x9) {
                 conn.sendPongFrame(payload);
             } else if (opcode == 0x1 || opcode == 0x0) {
-                // Text ou continuation
                 fragmentedBuffer.write(payload);
                 if (fin) {
-                    String text = new String(fragmentedBuffer.toByteArray(), StandardCharsets.UTF_8);
+                    String message = new String(fragmentedBuffer.toByteArray(), StandardCharsets.UTF_8);
                     fragmentedBuffer.reset();
                     try {
-                        org.json.JSONObject json = new org.json.JSONObject(text);
+                        org.json.JSONObject json = new org.json.JSONObject(message);
                         if ("PING".equals(json.optString("type"))) {
-                            conn.sendTextFrame("{\"type\":\"PONG\",\"payload\":{}} ".trim());
+                            conn.sendTextFrame("{\"type\":\"PONG\",\"payload\":{}}");
                             continue;
                         }
-                    } catch (org.json.JSONException ignored) { }
+                    } catch (org.json.JSONException ignored) {}
                     JSObject msgEv = new JSObject();
                     msgEv.put("clientId", clientId);
-                    msgEv.put("payload", text);
+                    msgEv.put("payload", message);
                     notifyListeners("messageReceived", msgEv);
                 }
             }
@@ -394,14 +318,9 @@ public class LocalHotspotPlugin extends Plugin {
             int b = in.read();
             if (b == -1) return null;
             buf.write(b);
-            if ((match == 0 && b == '\r') ||
-                (match == 1 && b == '\n') ||
-                (match == 2 && b == '\r') ||
-                (match == 3 && b == '\n')) {
+            if ((match == 0 && b == '\r') || (match == 1 && b == '\n') || (match == 2 && b == '\r') || (match == 3 && b == '\n')) {
                 match++;
-                if (match == 4) {
-                    return new String(buf.toByteArray(), StandardCharsets.US_ASCII);
-                }
+                if (match == 4) return new String(buf.toByteArray(), StandardCharsets.US_ASCII);
             } else {
                 match = (b == '\r') ? 1 : 0;
             }
@@ -410,14 +329,9 @@ public class LocalHotspotPlugin extends Plugin {
     }
 
     private static String extractWebSocketKey(String headers) {
-        for (String line : headers.split("\r\n")) {
+        for (String line : headers.split("\\r\\n")) {
             int idx = line.indexOf(':');
-            if (idx > 0) {
-                String name = line.substring(0, idx).trim();
-                if (name.equalsIgnoreCase("Sec-WebSocket-Key")) {
-                    return line.substring(idx + 1).trim();
-                }
-            }
+            if (idx > 0 && line.substring(0, idx).trim().equalsIgnoreCase("Sec-WebSocket-Key")) return line.substring(idx + 1).trim();
         }
         return null;
     }
@@ -429,16 +343,13 @@ public class LocalHotspotPlugin extends Plugin {
     }
 
     private static List<String> detectLocalIpv4Addresses() {
-        List<String> hotspot = new ArrayList<>();
-        List<String> wifi = new ArrayList<>();
-        List<String> others = new ArrayList<>();
+        List<String> hotspot = new ArrayList<>(), wifi = new ArrayList<>(), others = new ArrayList<>();
         try {
             Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
             for (NetworkInterface nif : Collections.list(ifaces)) {
                 if (!nif.isUp() || nif.isLoopback()) continue;
                 String name = nif.getName().toLowerCase(java.util.Locale.ROOT);
-                boolean isHotspot = name.startsWith("ap") || name.startsWith("swlan")
-                    || name.contains("softap") || name.startsWith("wlan1");
+                boolean isHotspot = name.startsWith("ap") || name.startsWith("swlan") || name.contains("softap") || name.startsWith("wlan1");
                 boolean isWifi = name.startsWith("wlan") || name.startsWith("wifi");
                 for (InetAddress addr : Collections.list(nif.getInetAddresses())) {
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
@@ -450,8 +361,7 @@ public class LocalHotspotPlugin extends Plugin {
                     }
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
         List<String> ordered = new ArrayList<>();
         ordered.addAll(hotspot);
         ordered.addAll(wifi);
@@ -460,20 +370,13 @@ public class LocalHotspotPlugin extends Plugin {
     }
 
     private static String pickPreferredHotspotIp(List<String> ips) {
-        // L'adresse du point d'accès Android est généralement la passerelle .1.
-        for (String ip : ips) {
-            if (ip.equals("192.168.43.1")) return ip;
-        }
-        for (String ip : ips) {
-            if (ip.startsWith("192.168.") && ip.endsWith(".1")) return ip;
-        }
+        for (String ip : ips) if (ip.equals("192.168.43.1")) return ip;
+        for (String ip : ips) if (ip.startsWith("192.168.") && ip.endsWith(".1")) return ip;
         for (String ip : ips) {
             if (ip.startsWith("10.") && ip.endsWith(".1")) return ip;
             if (ip.matches("172\\.(1[6-9]|2[0-9]|3[0-1])\\..*\\.1")) return ip;
         }
-        for (String ip : ips) {
-            if (ip.startsWith("192.168.")) return ip;
-        }
+        for (String ip : ips) if (ip.startsWith("192.168.")) return ip;
         return ips.isEmpty() ? "192.168.49.1" : ips.get(0);
     }
 }
