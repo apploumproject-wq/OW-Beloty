@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Play,
   Radio,
+  Settings,
   Smartphone,
   Users,
   Wifi,
@@ -13,6 +14,7 @@ import { MultiplayerHostSession } from '../engine/multiplayerHost';
 import {
   getDeviceHotspotNetworkInfo,
   isNativeAndroidEnvironment,
+  openHotspotSettings,
 } from '../native/localHotspotPlugin';
 import { PlayerProfile, SeatPosition, TurnDirection } from '../types/game';
 import { LobbyPlayerSlot } from '../types/network';
@@ -55,6 +57,8 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   const [nordName, setNordName] = useState('Partenaire Nord');
   const [estName, setEstName] = useState('Joueur Est');
   const [ouestName, setOuestName] = useState('Joueur Ouest');
+  const [hotspotName, setHotspotName] = useState('');
+  const [hotspotPassword, setHotspotPassword] = useState('');
 
   const [detectedIp, setDetectedIp] = useState<string>(hostIp);
   const [lobbySlots, setLobbySlots] = useState<LobbyPlayerSlot[]>(
@@ -175,6 +179,47 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                 </div>
               </div>
 
+              <div className="rounded-xl bg-emerald-950/50 border border-emerald-400/20 p-4 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void openHotspotSettings().catch(() => {
+                      window.alert("Impossible d’ouvrir les paramètres du hotspot. Ouvrez-les manuellement dans les paramètres Android.");
+                    });
+                  }}
+                  className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-[#F7F4EB] font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Configurer le hotspot dans Android</span>
+                </button>
+                <p className="text-xs text-emerald-100/70 leading-relaxed">
+                  Activez le point d’accès, puis revenez ici et recopiez son nom et son mot de passe. Android ne permet pas à OW’Beloty de modifier ces paramètres automatiquement.
+                </p>
+                <label className="flex flex-col gap-1.5 text-xs font-medium text-emerald-100/80">
+                  Nom du réseau Wi-Fi (SSID)
+                  <input
+                    type="text"
+                    value={hotspotName}
+                    onChange={(event) => setHotspotName(event.target.value)}
+                    placeholder="Ex. : OWBELOTY"
+                    maxLength={32}
+                    className="min-h-[44px] px-3 rounded-lg bg-[#04190F] border border-white/15 text-sm text-[#F7F4EB] placeholder:text-emerald-100/35"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs font-medium text-emerald-100/80">
+                  Mot de passe du hotspot
+                  <input
+                    type="text"
+                    value={hotspotPassword}
+                    onChange={(event) => setHotspotPassword(event.target.value)}
+                    placeholder="Mot de passe Wi-Fi"
+                    maxLength={63}
+                    autoComplete="off"
+                    className="min-h-[44px] px-3 rounded-lg bg-[#04190F] border border-white/15 text-sm text-[#F7F4EB] placeholder:text-emerald-100/35"
+                  />
+                </label>
+              </div>
+
               {!isNativeAndroid && !hostSession && (
                 <div className="rounded-xl bg-amber-500/10 border border-amber-400/25 p-3.5 flex items-start gap-2.5 text-xs sm:text-sm text-amber-100">
                   <AlertCircle className="w-5 h-5 text-amber-300 shrink-0 mt-0.5" />
@@ -266,6 +311,17 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     </div>
 
                   </div>
+
+                      <div className="rounded-xl bg-amber-400/10 border border-amber-300/25 p-3.5 text-sm flex flex-col gap-2">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-emerald-100/70">Nom du hotspot</span>
+                          <strong className="text-[#F7F4EB] text-right break-all">{hotspotName || 'Non renseigné'}</strong>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-emerald-100/70">Mot de passe Wi-Fi</span>
+                          <strong className="text-[#F7F4EB] text-right break-all">{hotspotPassword || 'Non renseigné'}</strong>
+                        </div>
+                      </div>
 
                   <div className="rounded-xl bg-emerald-950/60 border border-emerald-400/20 p-3.5 text-xs sm:text-sm text-emerald-50 leading-relaxed">
                     <strong className="text-amber-300">Connexion manuelle des 4 joueurs</strong>
