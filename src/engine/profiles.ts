@@ -154,3 +154,59 @@ export function getPlayerInitials(pseudo: string): string {
   }
   return cleaned.slice(0, 2).toUpperCase();
 }
+
+
+export interface PlayerStatistics {
+  solo: { played: number; wins: number; losses: number };
+  team: { played: number; wins: number; losses: number; partners: Record<string, number> };
+  recordedMatchIds: string[];
+}
+
+const STATS_STORAGE_PREFIX = 'owbeloty_stats_v1_';
+
+export function loadPlayerStatistics(profileId: string): PlayerStatistics {
+  const empty: PlayerStatistics = {
+    solo: { played: 0, wins: 0, losses: 0 },
+    team: { played: 0, wins: 0, losses: 0, partners: {} },
+    recordedMatchIds: [],
+  };
+  if (typeof window === 'undefined') return empty;
+  try {
+    const raw = window.localStorage.getItem(STATS_STORAGE_PREFIX + profileId);
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as Partial<PlayerStatistics>;
+    return {
+      solo: { played: parsed.solo?.played ?? 0, wins: parsed.solo?.wins ?? 0, losses: parsed.solo?.losses ?? 0 },
+      team: {
+        played: parsed.team?.played ?? 0,
+        wins: parsed.team?.wins ?? 0,
+        losses: parsed.team?.losses ?? 0,
+        partners: parsed.team?.partners ?? {},
+      },
+      recordedMatchIds: Array.isArray(parsed.recordedMatchIds) ? parsed.recordedMatchIds : [],
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export function recordPlayerMatchResult(
+  profileId: string,
+  matchId: string,
+  category: 'solo' | 'team',
+  won: boolean,
+  partnerPseudo?: string,
+): void {
+  if (typeof window === 'undefined' || !profileId || !matchId) return;
+  const stats = loadPlayerStatistics(profileId);
+  if (stats.recordedMatchIds.includes(matchId)) return;
+  const target = stats[category];
+  target.played += 1;
+  if (won) target.wins += 1;
+  else target.losses += 1;
+  if (category === 'team' && partnerPseudo) {
+    target.partners[partnerPseudo] = (target.partners[partnerPseudo] ?? 0) + 1;
+  }
+  stats.recordedMatchIds = [...stats.recordedMatchIds, matchId].slice(-500);
+  window.localStorage.setItem(STATS_STORAGE_PREFIX + profileId, JSON.stringify(stats));
+}
