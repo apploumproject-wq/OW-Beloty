@@ -28,12 +28,14 @@ interface HomeMenuProps {
   profile: PlayerProfile;
   onNavigate: (route: ScreenRoute) => void;
   onQuickPlay: () => void;
+  canResumeMatch?: boolean;
 }
 
 export const HomeMenu: React.FC<HomeMenuProps> = ({
   profile,
   onNavigate,
   onQuickPlay,
+  canResumeMatch = false,
 }) => {
   const secondaryMenus: Array<{
     route: ScreenRoute;
@@ -142,10 +144,10 @@ export const HomeMenu: React.FC<HomeMenuProps> = ({
           >
             <span className="flex items-center gap-3 whitespace-nowrap">
               <Play className="w-5 h-5 fill-current" />
-              Jouer
+              {canResumeMatch ? 'Reprendre la partie' : 'Jouer'}
             </span>
             <span className="text-xs font-semibold opacity-80 whitespace-nowrap">
-              Mode Solo · 32 cartes
+              {canResumeMatch ? 'Retour à la table multijoueur' : 'Mode Solo · 32 cartes'}
             </span>
           </button>
 
