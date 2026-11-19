@@ -510,6 +510,11 @@ export default function App() {
   return (
     <HomeMenu
       profile={profile}
+      canResumeMatch={Boolean(
+        clientSessionRef.current &&
+        clientState?.phase === 'EN_PARTIE' &&
+        clientState.matchState
+      )}
       onNavigate={(nextRoute) => {
         if (nextRoute === 'STATISTIQUES') setStatistics(loadPlayerStatistics(profile.id));
         setRoute(nextRoute);
