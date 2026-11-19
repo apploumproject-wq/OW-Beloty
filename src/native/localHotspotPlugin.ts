@@ -20,6 +20,7 @@ export interface StartHostServerResult {
 
 export interface LocalHotspotPluginInterface {
   getLocalNetworkInfo(): Promise<LocalNetworkInfoResult>;
+  openHotspotSettings(): Promise<void>;
   startHostServer(options: StartHostServerOptions): Promise<StartHostServerResult>;
   stopHostServer(): Promise<void>;
   sendToClient(options: { clientId: string; payload: string }): Promise<void>;
@@ -47,6 +48,11 @@ const NativeLocalHotspot =
 
 export function isNativeAndroidEnvironment(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+}
+
+export async function openHotspotSettings(): Promise<void> {
+  if (!isNativeAndroidEnvironment()) return;
+  await NativeLocalHotspot.openHotspotSettings();
 }
 
 export async function getDeviceHotspotNetworkInfo(): Promise<LocalNetworkInfoResult> {
