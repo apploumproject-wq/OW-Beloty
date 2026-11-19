@@ -37,6 +37,7 @@ import {
   TEAM_LABELS,
 } from '../engine/players';
 import { TARGET_MATCH_SCORE } from '../engine/scoring';
+import { recordPlayerMatchResult } from '../engine/profiles';
 import { getPlayableCards, resolveCompletedTrick } from '../engine/tricks';
 import {
   AppSettings,
@@ -97,6 +98,22 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
   const isMultiplayerClient = matchMode === 'MULTIJOUEUR_CLIENT';
   const isMultiplayer = isMultiplayerHost || isMultiplayerClient;
   const isLocalTest = !isSoloAi && !isMultiplayer;
+
+  const recordedResultsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (match.phase !== 'FIN_PARTIE' || !match.winnerTeam) return;
+    if (!isSoloAi && !isMultiplayer) return;
+    if (recordedResultsRef.current.has(match.matchId)) return;
+    recordedResultsRef.current.add(match.matchId);
+    const localPlayer = match.players[localPerspectiveSeat];
+    const won = match.winnerTeam === getTeamForSeat(localPerspectiveSeat);
+    if (isSoloAi) {
+      recordPlayerMatchResult(localPlayer.profile.id, match.matchId, 'solo', won);
+    } else {
+      const partner = match.players[getPartnerSeat(localPerspectiveSeat)].profile.pseudo;
+      recordPlayerMatchResult(localPlayer.profile.id, match.matchId, 'team', won, partner);
+    }
+  }, [match.phase, match.winnerTeam, match.matchId, match.players, localPerspectiveSeat, isSoloAi, isMultiplayer]);
 
   const [trickDisplayFreeze, setTrickDisplayFreeze] = useState<{
     cards: TrickCard[];
