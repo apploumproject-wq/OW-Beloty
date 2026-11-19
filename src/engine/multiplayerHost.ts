@@ -497,7 +497,7 @@ export class MultiplayerHostSession {
     if (!this.canStartMatch()) {
       return {
         ok: false,
-        reason: 'Les 4 joueurs doivent être connectés pour lancer la partie.',
+        reason: this.twoPlayerMode ? 'Les 2 joueurs doivent être connectés pour lancer la partie.' : 'Les 4 joueurs doivent être connectés pour lancer la partie.',
       };
     }
 
