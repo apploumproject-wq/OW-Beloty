@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { BarcodeFormat, BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import {
   AlertCircle,
   CheckCircle2,
-  QrCode,
   RefreshCw,
   Users,
   Wifi,
@@ -17,59 +15,10 @@ import { SubPageHeader } from './SubPageHeader';
 interface JoinMatchViewProps {
   localProfile: PlayerProfile;
   clientState: ClientSessionState | null;
-  onConnectToHost: (hostIp: string, port: number, sessionCode: string, wifi?: { ssid: string; password: string }) => void;
+  onConnectToHost: (hostIp: string, port: number, sessionCode: string) => void;
   onDisconnectFromHost: () => void;
   onGoToProfile: () => void;
   onBack: () => void;
-}
-
-export function parseOwBelotyInviteText(raw: string): {
-  hostIp?: string;
-  port?: number;
-  sessionCode?: string;
-  ssid?: string;
-  password?: string;
-} | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  if (trimmed.toUpperCase().startsWith('OWBELOTY|')) {
-    const parts = trimmed.split('|');
-    if (parts.length >= 4) {
-      const parsedPort = Number.parseInt(parts[2], 10);
-      return {
-        hostIp: parts[1].trim(),
-        port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
-        sessionCode: parts[3].trim().toUpperCase(),
-        ssid: parts[4] ? decodeURIComponent(parts[4]) : undefined,
-        password: parts[5] ? decodeURIComponent(parts[5]) : undefined,
-      };
-    }
-  }
-
-  if (trimmed.toLowerCase().startsWith('owbeloty://')) {
-    try {
-      const normalized = trimmed.replace(/^owbeloty:\/\//i, 'http://');
-      const url = new URL(normalized);
-      const ip = url.searchParams.get('ip') ?? undefined;
-      const portStr = url.searchParams.get('port');
-      const code = url.searchParams.get('code') ?? undefined;
-      const ssid = url.searchParams.get('ssid') ?? undefined;
-      const password = url.searchParams.get('password') ?? undefined;
-      const parsedPort = portStr ? Number.parseInt(portStr, 10) : DEFAULT_HOTSPOT_PORT;
-      return {
-        hostIp: ip,
-        port: Number.isFinite(parsedPort) ? parsedPort : DEFAULT_HOTSPOT_PORT,
-        sessionCode: code?.toUpperCase(),
-        ssid,
-        password,
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
 }
 
 export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
@@ -83,70 +32,11 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
   const [hostIp, setHostIp] = useState('192.168.43.1');
   const [port, setPort] = useState(String(DEFAULT_HOTSPOT_PORT));
   const [sessionCode, setSessionCode] = useState('');
-  const [wifiCredentials, setWifiCredentials] = useState<{ ssid: string; password: string } | undefined>();
-  const [qrInput, setQrInput] = useState('');
-  const [qrFeedback, setQrFeedback] = useState<string | null>(null);
-  const [isScanningQr, setIsScanningQr] = useState(false);
-
-  const handleApplyQrText = (value: string) => {
-    setQrInput(value);
-    const parsed = parseOwBelotyInviteText(value);
-    if (!parsed) {
-      setQrFeedback(
-        value.trim()
-          ? 'Format QR non reconnu (attendu : invitation OW’Beloty).'
-          : null,
-      );
-      return;
-    }
-    if (parsed.hostIp) setHostIp(parsed.hostIp);
-    if (parsed.port) setPort(String(parsed.port));
-    if (parsed.sessionCode) setSessionCode(parsed.sessionCode);
-    if (parsed.ssid && parsed.password) setWifiCredentials({ ssid: parsed.ssid, password: parsed.password });
-    setQrFeedback('Paramètres extraits du code QR OW’Beloty.');
-  };
-
-  const handleScanQr = async () => {
-    let listener: Awaited<ReturnType<typeof BarcodeScanner.addListener>> | null = null;
-    try {
-      const permission = await BarcodeScanner.requestPermissions();
-      if (permission.camera !== 'granted') {
-        setQrFeedback("L’autorisation d’utiliser la caméra est nécessaire pour scanner l’invitation.");
-        return;
-      }
-
-      setIsScanningQr(true);
-      document.body.classList.add('barcode-scanner-active');
-      listener = await BarcodeScanner.addListener('barcodesScanned', async ({ barcodes }) => {
-        const value = barcodes.find((barcode) => barcode.rawValue)?.rawValue;
-        if (!value) return;
-        await listener?.remove();
-        listener = null;
-        await BarcodeScanner.stopScan();
-        document.body.classList.remove('barcode-scanner-active');
-        setIsScanningQr(false);
-        handleApplyQrText(value);
-      });
-      await BarcodeScanner.startScan({ formats: [BarcodeFormat.QrCode] });
-    } catch (error) {
-      await listener?.remove();
-      try { await BarcodeScanner.stopScan(); } catch { /* scanner déjà arrêté */ }
-      document.body.classList.remove('barcode-scanner-active');
-      setIsScanningQr(false);
-      setQrFeedback(error instanceof Error ? error.message : "Impossible d’ouvrir le scanner QR.");
-    }
-  };
-
-  const handleCancelQrScan = async () => {
-    try { await BarcodeScanner.stopScan(); } catch { /* scanner déjà arrêté */ }
-    document.body.classList.remove('barcode-scanner-active');
-    setIsScanningQr(false);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericPort = Number.parseInt(port, 10) || DEFAULT_HOTSPOT_PORT;
-    onConnectToHost(hostIp.trim(), numericPort, sessionCode.trim().toUpperCase(), wifiCredentials);
+    onConnectToHost(hostIp.trim(), numericPort, sessionCode.trim().toUpperCase());
   };
 
   const isConnecting = clientState?.phase === 'CONNEXION';
@@ -279,40 +169,18 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
                   Connexion au téléphone hôte (Hotspot Wi-Fi)
                 </h2>
                 <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                  Sur ce téléphone, appuyez sur « Scanner le QR code » puis visez le code affiché sur le téléphone de l’hôte. OW’Beloty récupère les informations et demande à Android de rejoindre le Wi-Fi ; confirmez la fenêtre Android si elle apparaît.
+                  Connectez d’abord ce téléphone au point d’accès Wi-Fi de l’hôte depuis les paramètres Android. Revenez ensuite ici et saisissez les informations affichées sur son écran.
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void handleScanQr()}
-              className="w-full min-h-[54px] px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#062114] font-bold text-base flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-            >
-              <QrCode className="w-5 h-5" />
-              Scanner le QR code de l’hôte
-            </button>
-
-            {/* Import manuel de secours */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="qr-paste-input"
-                className="text-xs font-medium text-emerald-100/80 flex items-center gap-1.5"
-              >
-                <QrCode className="w-3.5 h-3.5 text-amber-300" />
-                <span>Ou coller manuellement le code d’invitation</span>
-              </label>
-              <input
-                id="qr-paste-input"
-                type="text"
-                value={qrInput}
-                onChange={(e) => handleApplyQrText(e.target.value)}
-                placeholder="OWBELOTY|IP|7432|CODE|SSID|MOT_DE_PASSE"
-                className="min-h-[44px] px-3.5 rounded-xl bg-[#04190F] border border-white/15 text-xs font-mono text-[#F7F4EB] focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              {qrFeedback && (
-                <span className="text-xs text-amber-200">{qrFeedback}</span>
-              )}
+            <div className="rounded-xl bg-emerald-950/60 border border-emerald-400/20 p-3.5 text-xs sm:text-sm text-emerald-50 leading-relaxed">
+              <strong className="text-amber-300">Avant de rejoindre</strong>
+              <ol className="list-decimal pl-5 mt-2 space-y-1">
+                <li>Ouvrez les paramètres Wi-Fi de votre téléphone.</li>
+                <li>Sélectionnez le point d’accès mobile du téléphone hôte et connectez-vous avec son mot de passe.</li>
+                <li>Revenez dans OW’Beloty et recopiez l’adresse IP et le code de session indiqués par l’hôte.</li>
+              </ol>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -387,26 +255,13 @@ export const JoinMatchView: React.FC<JoinMatchViewProps> = ({
               />
               <span>
                 {isConnecting
-                  ? 'Connexion au salon Hotspot...'
-                  : wifiCredentials ? 'Rejoindre le réseau et le salon' : 'Rejoindre le salon'}
+                  ? 'Connexion au salon...'
+                  : 'Rejoindre le salon'}
               </span>
             </button>
           </form>
         )}
       </main>
-      {isScanningQr && (
-        <div className="qr-scanner-modal">
-          <div className="w-full max-w-sm rounded-2xl bg-[#062114]/95 border border-amber-300/40 p-5 text-center shadow-2xl">
-            <QrCode className="w-9 h-9 text-amber-300 mx-auto mb-2" />
-            <h2 className="text-lg font-bold text-[#F7F4EB]">Scanner l’invitation OW’Beloty</h2>
-            <p className="text-sm text-emerald-100/80 mt-1">Placez le QR code de l’hôte dans le cadre de la caméra.</p>
-            <button type="button" onClick={() => void handleCancelQrScan()} className="mt-4 min-h-[44px] px-5 rounded-xl bg-white/15 text-white font-semibold">
-              Annuler le scan
-            </button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
