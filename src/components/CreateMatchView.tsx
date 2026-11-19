@@ -28,7 +28,7 @@ interface CreateMatchViewProps {
   hostIp: string;
   hostServerError: string | null;
   isStartingServer: boolean;
-  onStartHotspotHost: (turnDirection: TurnDirection) => void;
+  onStartHotspotHost: (turnDirection: TurnDirection, twoPlayerMode: boolean) => void;
   onStopHotspotHost: () => void;
   onLaunchMultiplayerMatch: () => void;
   onStartLocalMatch: (
@@ -52,6 +52,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   onBack,
 }) => {
   const [tab, setTab] = useState<'HOTSPOT' | 'LOCAL'>('HOTSPOT');
+  const [twoPlayerMode, setTwoPlayerMode] = useState(false);
   const [turnDirection, setTurnDirection] =
     useState<TurnDirection>(defaultTurnDirection);
   const [nordName, setNordName] = useState('Partenaire Nord');
@@ -163,6 +164,8 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
 
         {tab === 'HOTSPOT' ? (
           <div className="flex flex-col gap-5">
+
+            {!hostSession && <section className="rounded-xl bg-black/25 border border-white/10 p-3.5 flex flex-col gap-2"><strong className="text-sm text-[#F7F4EB]">Format de la partie Hotspot</strong><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setTwoPlayerMode(false)} className="min-h-[44px] rounded-lg bg-white/10 text-emerald-100 text-xs font-semibold">4 joueurs humains</button><button type="button" onClick={() => setTwoPlayerMode(true)} className="min-h-[44px] rounded-lg bg-amber-400 text-[#062114] text-xs font-semibold">2 joueurs + 2 IA</button></div><p className="text-xs text-emerald-100/70">Deux joueurs humains associés contre deux IA.</p></section>}
             {/* Guide Hotspot Android manuel */}
             <section className="rounded-2xl bg-black/25 border border-white/10 p-5 flex flex-col gap-4">
               <div className="flex items-start gap-3">
@@ -274,7 +277,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                   <button
                     type="button"
                     disabled={isStartingServer}
-                    onClick={() => onStartHotspotHost(turnDirection)}
+                    onClick={() => onStartHotspotHost(turnDirection, twoPlayerMode)}
                     className="w-full min-h-[52px] px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-[#062114] font-bold text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
                   >
                     <Wifi className="w-5 h-5" />
@@ -324,13 +327,13 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                       </div>
 
                   <div className="rounded-xl bg-emerald-950/60 border border-emerald-400/20 p-3.5 text-xs sm:text-sm text-emerald-50 leading-relaxed">
-                    <strong className="text-amber-300">Connexion manuelle des 4 joueurs</strong>
+                    <strong className="text-amber-300">Connexion manuelle des {hostSession.twoPlayerMode ? '2 joueurs' : '4 joueurs'}</strong>
                     <ol className="list-decimal pl-5 mt-2 space-y-1">
                       <li>Sur le téléphone hôte, activez le point d’accès mobile dans les paramètres Android avant de créer le salon.</li>
                       <li>Laissez OW’Beloty ouvert sur cet écran pendant toute la partie.</li>
-                      <li>Sur les trois autres téléphones, ouvrez les paramètres Wi-Fi Android et connectez-vous au point d’accès de l’hôte.</li>
+                      <li>Sur {hostSession.twoPlayerMode ? 'le second téléphone' : 'les trois autres téléphones'}, ouvrez les paramètres Wi-Fi Android et connectez-vous au point d’accès de l’hôte.</li>
                       <li>Dans OW’Beloty, ouvrez « Rejoindre une partie » et saisissez l’adresse IP, le port et le code de session affichés ici.</li>
-                      <li>Quand le compteur indique 4/4, l’hôte peut lancer la partie.</li>
+                      <li>Quand le compteur indique {hostSession.twoPlayerMode ? '2/2' : '4/4'}, l’hôte peut lancer la partie.</li>
                     </ol>
                   </div>
 
@@ -342,7 +345,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                         Salle d’attente des joueurs
                       </span>
                       <span className="tabular-nums text-amber-300">
-                        {connectedCount} / 4 connectés
+                        {connectedCount} / {hostSession.twoPlayerMode ? 2 : 4} joueurs connectés
                       </span>
                     </div>
 
@@ -402,8 +405,8 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                       <Play className="w-5 h-5 fill-current" />
                       <span>
                         {canLaunchHotspot
-                          ? 'Lancer la partie (4/4)'
-                          : `En attente (${connectedCount}/4)`}
+                          ? (hostSession.twoPlayerMode ? 'Lancer la partie (2/2)' : 'Lancer la partie (4/4)')
+                          : `En attente (${connectedCount}/${hostSession.twoPlayerMode ? 2 : 4})`}
                       </span>
                     </button>
                     <button
