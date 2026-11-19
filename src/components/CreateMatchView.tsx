@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
 import {
   AlertCircle,
   CheckCircle2,
-  Copy,
   Play,
-  QrCode,
   Radio,
   Smartphone,
   Users,
@@ -27,7 +24,6 @@ interface CreateMatchViewProps {
   defaultTurnDirection: TurnDirection;
   hostSession: MultiplayerHostSession | null;
   hostIp: string;
-  managedWifi: { ssid: string; password: string } | null;
   hostServerError: string | null;
   isStartingServer: boolean;
   onStartHotspotHost: (turnDirection: TurnDirection) => void;
@@ -45,7 +41,6 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   defaultTurnDirection,
   hostSession,
   hostIp,
-  managedWifi,
   hostServerError,
   isStartingServer,
   onStartHotspotHost,
@@ -62,8 +57,6 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   const [ouestName, setOuestName] = useState('Joueur Ouest');
 
   const [detectedIp, setDetectedIp] = useState<string>(hostIp);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [copiedNotice, setCopiedNotice] = useState(false);
   const [lobbySlots, setLobbySlots] = useState<LobbyPlayerSlot[]>(
     hostSession ? hostSession.getLobbyPlayers() : [],
   );
@@ -72,7 +65,6 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
   const activeCode = hostSession?.sessionCode ?? previewConfig.sessionCode;
   const activePort = hostSession?.port ?? DEFAULT_HOTSPOT_PORT;
   const effectiveIp = hostIp || detectedIp;
-  const qrPayloadString = `OWBELOTY|${effectiveIp}|${activePort}|${activeCode}|${managedWifi ? encodeURIComponent(managedWifi.ssid) : ''}|${managedWifi ? encodeURIComponent(managedWifi.password) : ''}`;
   const isNativeAndroid = isNativeAndroidEnvironment();
 
   useEffect(() => {
@@ -99,34 +91,6 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
       setLobbySlots([...hostSession.getLobbyPlayers()]);
     });
   }, [hostSession]);
-
-  useEffect(() => {
-    let cancelled = false;
-    QRCode.toDataURL(qrPayloadString, {
-      width: 220,
-      margin: 2,
-      color: { dark: '#062114', light: '#FCFBF7' },
-    })
-      .then((url) => {
-        if (!cancelled) setQrDataUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setQrDataUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [qrPayloadString]);
-
-  const handleCopyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(qrPayloadString);
-      setCopiedNotice(true);
-      window.setTimeout(() => setCopiedNotice(false), 1800);
-    } catch {
-      // Ignorer si le presse-papiers n'est pas autorisé
-    }
-  };
 
   const handleLaunchLocal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,7 +170,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     Héberger sur Hotspot Wi-Fi local
                   </h2>
                   <p className="text-xs sm:text-sm text-emerald-100/75 mt-1 leading-relaxed">
-                    Le téléphone qui crée la room devient l’hôte. Les trois autres téléphones ouvrent « Rejoindre une partie », scannent ce QR code et acceptent la demande Wi-Fi Android. Aucun accès Internet n’est nécessaire.
+                    Activez d’abord le point d’accès mobile dans les paramètres Android. Les trois autres joueurs se connectent manuellement à ce réseau Wi-Fi, puis saisissent les informations du salon. Aucun accès Internet n’est nécessaire.
                   </p>
                 </div>
               </div>
@@ -272,7 +236,7 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                     <span>
                       {isStartingServer
                         ? 'Ouverture du salon Hotspot...'
-                        : 'Créer automatiquement le réseau et le salon'}
+                        : 'J’ai activé le point d’accès Wi-Fi — créer le salon'}
                     </span>
                   </button>
                 </>
@@ -281,16 +245,6 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                   {/* Coordonnées de connexion + QR Code */}
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-center rounded-2xl bg-[#04190F] border border-amber-300/25 p-4">
                     <div className="flex flex-col gap-2 text-sm tabular-nums">
-                      {managedWifi && (
-                        <>
-                          <div className="text-xs text-emerald-100/80">Réseau Wi-Fi : <strong className="text-[#F7F4EB]">{managedWifi.ssid}</strong></div>
-                          <div className="text-xs text-emerald-100/80">Mot de passe de secours : <strong className="text-[#F7F4EB] font-mono select-all">{managedWifi.password}</strong></div>
-                        </>
-                      )}
-                      <div className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
-                        <QrCode className="w-4 h-4" />
-                        <span>Invitation à scanner sur les 3 autres téléphones</span>
-                      </div>
                       <div className="flex items-center justify-between gap-2 py-1 border-b border-white/10">
                         <span className="text-emerald-100/70">Adresse IP</span>
                         <span className="font-mono font-bold text-[#F7F4EB]">
@@ -309,41 +263,17 @@ export const CreateMatchView: React.FC<CreateMatchViewProps> = ({
                           {activeCode}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleCopyInvite}
-                        className="mt-1 min-h-[40px] px-3 rounded-lg bg-white/10 hover:bg-white/15 text-xs font-medium text-[#F7F4EB] flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>
-                          {copiedNotice
-                            ? 'Code de connexion copié'
-                            : 'Copier le code QR texte'}
-                        </span>
-                      </button>
                     </div>
 
-                    {qrDataUrl && (
-                      <div className="flex flex-col items-center gap-1.5 mx-auto">
-                        <img
-                          src={qrDataUrl}
-                          alt={`QR Code session ${activeCode}`}
-                          className="w-36 h-36 rounded-xl border-2 border-amber-300/40 bg-[#FCFBF7]"
-                        />
-                        <span className="text-[11px] text-emerald-100/70">
-                          À scanner depuis « Rejoindre »
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   <div className="rounded-xl bg-emerald-950/60 border border-emerald-400/20 p-3.5 text-xs sm:text-sm text-emerald-50 leading-relaxed">
-                    <strong className="text-amber-300">Comment connecter les 4 joueurs ?</strong>
+                    <strong className="text-amber-300">Connexion manuelle des 4 joueurs</strong>
                     <ol className="list-decimal pl-5 mt-2 space-y-1">
-                      <li>Laissez cette room ouverte sur le téléphone hôte.</li>
-                      <li>Sur chacun des 3 autres téléphones, ouvrez OW’Beloty puis « Rejoindre une partie ».</li>
-                      <li>Appuyez sur « Scanner le QR code de l’hôte » et visez ce code.</li>
-                      <li>Acceptez la demande de connexion Wi-Fi affichée par Android.</li>
+                      <li>Sur le téléphone hôte, activez le point d’accès mobile dans les paramètres Android avant de créer le salon.</li>
+                      <li>Laissez OW’Beloty ouvert sur cet écran pendant toute la partie.</li>
+                      <li>Sur les trois autres téléphones, ouvrez les paramètres Wi-Fi Android et connectez-vous au point d’accès de l’hôte.</li>
+                      <li>Dans OW’Beloty, ouvrez « Rejoindre une partie » et saisissez l’adresse IP, le port et le code de session affichés ici.</li>
                       <li>Quand le compteur indique 4/4, l’hôte peut lancer la partie.</li>
                     </ol>
                   </div>
