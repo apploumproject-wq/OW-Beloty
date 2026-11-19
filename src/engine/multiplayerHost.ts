@@ -36,7 +36,6 @@ import {
 import { localHotspotAdapter } from './networkAdapter';
 import { getPlayableCards } from './tricks';
 import { decideAiBid, decideAiCard, extractAiContext } from './ai';
-import { applyBidPass } from './match';
 
 export interface HostTransportBridge {
   sendToClient(clientId: string, message: SyncMessage): void;
