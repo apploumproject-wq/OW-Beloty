@@ -55,7 +55,6 @@ export default function App() {
   // État Hôte Hotspot Wi-Fi
   const [hostSession, setHostSession] = useState<MultiplayerHostSession | null>(null);
   const [hostIp, setHostIp] = useState<string>('192.168.43.1');
-  const [managedWifi, setManagedWifi] = useState<{ ssid: string; password: string } | null>(null);
   const [hostError, setHostError] = useState<string | null>(null);
   const [isStartingHostServer, setIsStartingHostServer] = useState(false);
   const [hostViewMatch, setHostViewMatch] = useState<MatchState | null>(null);
@@ -69,8 +68,6 @@ export default function App() {
     hostIp: string;
     port: number;
     sessionCode: string;
-    ssid?: string;
-    password?: string;
   } | null>(null);
 
   const cleanupHostListeners = useCallback(async () => {
@@ -92,8 +89,6 @@ export default function App() {
     if (isNativeAndroidEnvironment()) {
       try {
         await NativeLocalHotspot.stopHostServer();
-        await NativeLocalHotspot.stopManagedHotspot();
-        setManagedWifi(null);
       } catch {
         // Ignorer
       }
@@ -110,7 +105,6 @@ export default function App() {
       clientSessionRef.current.disconnect();
       clientSessionRef.current = null;
     }
-    if (isNativeAndroidEnvironment()) void NativeLocalHotspot.disconnectManagedHotspot().catch(() => {});
     setClientState(null);
   }, []);
 
@@ -204,12 +198,6 @@ export default function App() {
     try {
       await cleanupHostListeners();
       const cfg = localHotspotAdapter.prepareHostSession(profile);
-      const wifi = await NativeLocalHotspot.startManagedHotspot();
-      if (!wifi.ssid || !wifi.password) {
-        await NativeLocalHotspot.stopManagedHotspot();
-        throw new Error('Android a démarré le réseau, mais n’a pas fourni ses identifiants.');
-      }
-      setManagedWifi({ ssid: wifi.ssid, password: wifi.password });
       const result = await NativeLocalHotspot.startHostServer({
         port: cfg.port,
         sessionCode: cfg.sessionCode,
@@ -252,13 +240,12 @@ export default function App() {
       });
 
       localHotspotAdapter.setStatus('SERVEUR_ACTIF');
-      setHostIp(result.hostIp || wifi.hostIp || '192.168.49.1');
+      setHostIp(result.hostIp || '192.168.49.1');
       setHostSession(session);
     } catch (err) {
       if (isNativeAndroidEnvironment()) {
-        try { await NativeLocalHotspot.stopHostServer(); await NativeLocalHotspot.stopManagedHotspot(); } catch { /* Ignorer */ }
+        try { await NativeLocalHotspot.stopHostServer(); } catch { /* Ignorer */ }
       }
-      setManagedWifi(null);
       setHostError(
         err instanceof Error
           ? err.message
@@ -281,27 +268,16 @@ export default function App() {
     setRoute('JOUER');
   };
 
-  const handleConnectToHost = async (
+  const handleConnectToHost = (
     targetIp: string,
     targetPort: number,
     targetCode: string,
-    wifi?: { ssid: string; password: string },
   ) => {
     disconnectClient();
-    try {
-      if (wifi && isNativeAndroidEnvironment()) {
-        await NativeLocalHotspot.connectToManagedHotspot(wifi);
-      }
-    } catch (err) {
-      setClientState({ phase: 'ERREUR', sessionCode: targetCode, mySeat: null, turnDirection: 'ANTI_HORAIRE', lobbyPlayers: [], matchState: null, errorMessage: err instanceof Error ? err.message : 'Connexion Wi-Fi impossible.', noticeMessage: null });
-      return;
-    }
     lastClientTargetRef.current = {
       hostIp: targetIp,
       port: targetPort,
       sessionCode: targetCode,
-      ssid: wifi?.ssid,
-      password: wifi?.password,
     };
 
     let sessionRef: MultiplayerClientSession;
@@ -330,7 +306,7 @@ export default function App() {
   const handleClientReconnect = () => {
     const target = lastClientTargetRef.current;
     if (!target) return;
-    handleConnectToHost(target.hostIp, target.port, target.sessionCode, target.ssid && target.password ? { ssid: target.ssid, password: target.password } : undefined);
+    handleConnectToHost(target.hostIp, target.port, target.sessionCode);
   };
 
   const handleQuickPlay = () => {
@@ -462,7 +438,6 @@ export default function App() {
         defaultTurnDirection={settings.turnDirection}
         hostSession={hostSession}
         hostIp={hostIp}
-        managedWifi={managedWifi}
         hostServerError={hostError}
         isStartingServer={isStartingHostServer}
         onStartHotspotHost={handleStartHotspotHost}
