@@ -569,7 +569,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
       )}
 
       {/* Plateau de table principal */}
-      <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto px-2 sm:px-6 py-3 flex flex-col justify-between gap-2">
+      <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto px-2 sm:px-6 py-2 flex flex-col justify-between gap-1.5">
         {/* Siège HAUT (Partenaire) */}
         <div className="flex flex-col items-center gap-1.5">
           <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-black/30 border border-white/10">
@@ -625,7 +625,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
           </div>
 
           {/* ARÈNE CENTRALE DU PLI & CONTRAT */}
-          <div className="relative min-h-[210px] sm:min-h-[250px] rounded-3xl border border-amber-300/20 bg-black/20 flex flex-col items-center justify-between p-3 sm:p-4">
+          <div className="relative min-h-[230px] sm:min-h-[270px] rounded-3xl border border-amber-300/20 bg-black/20 flex flex-col items-center justify-between p-3 sm:p-4">
             <div className="text-center text-xs text-emerald-100/85 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 tabular-nums">
               <span>Donne {match.roundNumber}</span>
               <span aria-hidden="true">·</span>
@@ -657,7 +657,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
             </div>
 
             {/* 4 cartes posées en croix selon l'orientation relative du joueur */}
-            <div className="relative w-full max-w-[230px] h-[146px] sm:h-[168px] my-1">
+            <div className="relative w-full max-w-[250px] h-[158px] sm:h-[180px] my-1">
               <div className="absolute top-0 left-1/2 -translate-x-1/2">
                 {trickCardBySeat[seatTop] && (
                   <PlayingCard card={trickCardBySeat[seatTop]!.card} size="sm" />
@@ -722,9 +722,9 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
         </div>
 
         {/* ZONE BASSE : Enchères OU Main tactile du joueur */}
-        <section className="pb-safe flex flex-col gap-2.5">
+        <section className="pb-safe flex flex-col gap-1.5">
           {match.phase === 'ENCHERES' && (
-            <div className="rounded-2xl bg-black/40 border border-white/15 p-3 sm:p-4 flex flex-col gap-2.5">
+            <div className="rounded-2xl bg-black/40 border border-white/15 p-2 sm:p-3 flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-100/80">
                 <span>
                   {canActInBidding
@@ -740,7 +740,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                 {CONTRACT_OPTIONS.map((opt) => {
                   const isRed = opt.type === 'CARREAU' || opt.type === 'COEUR';
                   const isAlreadyActive = match.activeContract === opt.type;
@@ -762,7 +762,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                           contract: opt.type as ContractType,
                         })
                       }
-                      className={`min-h-[48px] px-2 py-1.5 rounded-xl border text-xs sm:text-sm font-semibold flex flex-col items-center justify-center leading-tight transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      className={`min-h-[44px] px-1.5 py-1 rounded-xl border text-xs sm:text-sm font-semibold flex flex-col items-center justify-center leading-tight transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                         isAlreadyActive
                           ? 'bg-amber-400 text-[#062114] border-amber-300'
                           : 'bg-[#FCFBF7] hover:bg-amber-50 border-stone-300'
@@ -796,7 +796,7 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
                   type="button"
                   disabled={!canPassInBidding}
                   onClick={() => handleBidAction({ kind: 'PASSE' })}
-                  className="flex-1 min-h-[46px] px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-sm font-semibold text-[#F7F4EB] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex-1 min-h-[42px] px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-sm font-semibold text-[#F7F4EB] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {!match.activeContract && activeSeat === match.firstAnnouncerSeat
                     ? 'Contrat obligatoire'
