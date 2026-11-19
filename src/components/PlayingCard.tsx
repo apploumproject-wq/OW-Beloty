@@ -47,6 +47,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   }
 
   const meta = SUIT_META[card.suit];
+  const displayRank: Record<string, string> = { V: 'J', D: 'Q', R: 'K' };
+  const rankLabel = displayRank[card.rank] ?? card.rank;
   const colorClass = meta.isRed ? 'text-[#C81E1E]' : 'text-[#111827]';
   const isCourt = card.rank === 'V' || card.rank === 'D' || card.rank === 'R' || card.rank === 'A';
 
@@ -67,12 +69,12 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       type="button"
       onClick={playable ? onClick : undefined}
       disabled={!onClick || !playable}
-      aria-label={`${card.rank} de ${meta.label}`}
+      aria-label={`${rankLabel} de ${meta.label}`}
       className={`${sizeClass} ${interactiveClasses} ${stateClasses} relative bg-[#FCFBF7] border border-stone-300/90 flex flex-col justify-between p-1.5 select-none transition-transform duration-150 shrink-0 text-left`}
     >
       <div className={`flex flex-col items-center leading-none w-fit ${colorClass}`}>
         <span className="text-xs sm:text-sm font-bold tracking-tight font-mono">
-          {card.rank}
+          {rankLabel}
         </span>
         <span className="text-[11px] sm:text-xs leading-none">{meta.symbol}</span>
       </div>
@@ -97,7 +99,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         className={`flex flex-col items-center leading-none w-fit self-end rotate-180 ${colorClass}`}
       >
         <span className="text-xs sm:text-sm font-bold tracking-tight font-mono">
-          {card.rank}
+          {rankLabel}
         </span>
         <span className="text-[11px] sm:text-xs leading-none">{meta.symbol}</span>
       </div>
