@@ -57,6 +57,7 @@ export default function App() {
   const [hostIp, setHostIp] = useState<string>('192.168.43.1');
   const [hostError, setHostError] = useState<string | null>(null);
   const [isStartingHostServer, setIsStartingHostServer] = useState(false);
+  const [hostTwoPlayerMode, setHostTwoPlayerMode] = useState(false);
   const [hostViewMatch, setHostViewMatch] = useState<MatchState | null>(null);
   const [hostDisconnectedSeats, setHostDisconnectedSeats] = useState<SeatPosition[]>([]);
   const hostListenersRef = useRef<PluginListenerHandle[]>([]);
@@ -185,7 +186,8 @@ export default function App() {
     return fresh;
   };
 
-  const handleStartHotspotHost = async (turnDirection: TurnDirection) => {
+  const handleStartHotspotHost = async (turnDirection: TurnDirection, twoPlayerMode = false) => {
+    setHostTwoPlayerMode(twoPlayerMode);
     setHostError(null);
     if (!isNativeAndroidEnvironment()) {
       setHostError(
@@ -209,6 +211,7 @@ export default function App() {
         port: result.port || DEFAULT_HOTSPOT_PORT,
         turnDirection,
         sortCardsBySuit: settings.sortCardsBySuit,
+        twoPlayerMode,
         transport: {
           sendToClient: (clientId, msg) => {
             void NativeLocalHotspot.sendToClient({
