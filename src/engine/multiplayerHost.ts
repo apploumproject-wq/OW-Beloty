@@ -35,6 +35,8 @@ import {
 } from './match';
 import { localHotspotAdapter } from './networkAdapter';
 import { getPlayableCards } from './tricks';
+import { decideAiBid, decideAiCard, extractAiContext } from './ai';
+import { applyBidPass } from './match';
 
 export interface HostTransportBridge {
   sendToClient(clientId: string, message: SyncMessage): void;
@@ -49,6 +51,7 @@ export class MultiplayerHostSession {
   readonly hostProfile: PlayerProfile;
   turnDirection: TurnDirection;
   sortCardsBySuit: boolean;
+  readonly twoPlayerMode: boolean;
 
   private transport: HostTransportBridge;
   private sequence = 0;
@@ -68,6 +71,7 @@ export class MultiplayerHostSession {
     turnDirection: TurnDirection;
     sortCardsBySuit: boolean;
     transport: HostTransportBridge;
+    twoPlayerMode?: boolean;
   }) {
     this.hostProfile = options.hostProfile;
     this.sessionCode = options.sessionCode.trim().toUpperCase();
@@ -75,6 +79,7 @@ export class MultiplayerHostSession {
     this.turnDirection = options.turnDirection;
     this.sortCardsBySuit = options.sortCardsBySuit;
     this.transport = options.transport;
+    this.twoPlayerMode = options.twoPlayerMode ?? false;
 
     this.slots = {
       SUD: {
@@ -83,9 +88,23 @@ export class MultiplayerHostSession {
         connected: true,
         isHost: true,
       },
-      EST: { seat: 'EST', profile: null, connected: false, isHost: false },
+      EST: this.twoPlayerMode
+        ? { seat: 'EST', profile: this.createAiProfile('EST'), connected: true, isHost: false }
+        : { seat: 'EST', profile: null, connected: false, isHost: false },
       NORD: { seat: 'NORD', profile: null, connected: false, isHost: false },
-      OUEST: { seat: 'OUEST', profile: null, connected: false, isHost: false },
+      OUEST: this.twoPlayerMode
+        ? { seat: 'OUEST', profile: this.createAiProfile('OUEST'), connected: true, isHost: false }
+        : { seat: 'OUEST', profile: null, connected: false, isHost: false },
+    };
+  }
+
+  private createAiProfile(seat: 'EST' | 'OUEST'): PlayerProfile {
+    return {
+      id: `hotspot-ai-${seat.toLowerCase()}`,
+      pseudo: seat === 'EST' ? 'IA Est' : 'IA Ouest',
+      avatarDataUrl: null,
+      updatedAt: Date.now(),
+      deviceTag: 'Intelligence Artificielle',
     };
   }
 
@@ -125,11 +144,11 @@ export class MultiplayerHostSession {
   }
 
   canStartMatch(): boolean {
-    return (
-      !this.closed &&
-      this.matchState === null &&
-      this.getLobbyPlayers().every((s) => s.profile !== null && s.connected)
-    );
+    if (this.closed || this.matchState !== null) return false;
+    if (this.twoPlayerMode) {
+      return this.slots.SUD.connected && this.slots.NORD.profile !== null && this.slots.NORD.connected;
+    }
+    return this.getLobbyPlayers().every((s) => s.profile !== null && s.connected);
   }
 
   /**
@@ -347,7 +366,7 @@ export class MultiplayerHostSession {
 
     // 1. Reconnexion d'un joueur déjà assis à un siège (même profile.id)
     let targetSeat: SeatPosition | null = null;
-    for (const seat of REMOTE_SEATS) {
+    for (const seat of (this.twoPlayerMode ? ['NORD'] as SeatPosition[] : REMOTE_SEATS)) {
       if (this.slots[seat].profile?.id === payload.profile.id) {
         targetSeat = seat;
         break;
@@ -365,7 +384,7 @@ export class MultiplayerHostSession {
         );
         return;
       }
-      for (const seat of REMOTE_SEATS) {
+      for (const seat of (this.twoPlayerMode ? ['NORD'] as SeatPosition[] : REMOTE_SEATS)) {
         if (this.slots[seat].profile === null) {
           targetSeat = seat;
           break;
@@ -495,6 +514,7 @@ export class MultiplayerHostSession {
     );
     fresh.matchMode = 'MULTIJOUEUR_HOTE';
     this.matchState = fresh;
+    this.processAiTurns();
 
     this.broadcastLobby();
     this.broadcastMatchSnapshots('LANCER_PARTIE');
@@ -520,6 +540,7 @@ export class MultiplayerHostSession {
     const next = startNextRound(this.matchState, this.sortCardsBySuit);
     next.matchMode = 'MULTIJOUEUR_HOTE';
     this.matchState = next;
+    this.processAiTurns();
     this.broadcastMatchSnapshots('ETAT_COMPLET_PARTIE');
     this.emitChange();
     return { ok: true };
@@ -542,9 +563,36 @@ export class MultiplayerHostSession {
     );
     fresh.matchMode = 'MULTIJOUEUR_HOTE';
     this.matchState = fresh;
+    this.processAiTurns();
     this.broadcastMatchSnapshots('ETAT_COMPLET_PARTIE');
     this.emitChange();
     return { ok: true };
+  }
+
+
+  private processAiTurns(): void {
+    if (!this.twoPlayerMode || !this.matchState) return;
+    let safety = 0;
+    while (
+      this.matchState &&
+      (this.matchState.phase === 'ENCHERES' || this.matchState.phase === 'JEU') &&
+      (this.matchState.currentTurnSeat === 'EST' || this.matchState.currentTurnSeat === 'OUEST') &&
+      safety < 12
+    ) {
+      safety += 1;
+      const seat = this.matchState.currentTurnSeat;
+      const context = extractAiContext(this.matchState, seat);
+      if (this.matchState.phase === 'ENCHERES') {
+        const bid = decideAiBid(context);
+        if (bid.action === 'CONTRAT') this.matchState = applyBidContract(this.matchState, seat, bid.contract);
+        else if (bid.action === 'CONTRE') this.matchState = applyBidContre(this.matchState, seat);
+        else if (bid.action === 'SURCONTRE') this.matchState = applyBidSurcontre(this.matchState, seat);
+        else this.matchState = applyBidPass(this.matchState, seat, this.sortCardsBySuit);
+      } else if (this.matchState.activeContract) {
+        const card = decideAiCard(context);
+        this.matchState = applyPlayCard(this.matchState, seat, card.id);
+      }
+    }
   }
 
   private applyBidAction(
@@ -634,6 +682,7 @@ export class MultiplayerHostSession {
       return { ok: false, reason: 'Type d’enchère inconnu.' };
     }
 
+    this.processAiTurns();
     this.broadcastMatchSnapshots('ETAT_COMPLET_PARTIE');
     this.emitChange();
     return { ok: true };
@@ -676,6 +725,7 @@ export class MultiplayerHostSession {
     }
 
     this.matchState = applyPlayCard(this.matchState, seat, cardId);
+    this.processAiTurns();
     this.broadcastMatchSnapshots('ETAT_COMPLET_PARTIE');
     this.emitChange();
     return { ok: true };
