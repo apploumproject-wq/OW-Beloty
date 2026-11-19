@@ -7,6 +7,7 @@ import { HomeMenu, ScreenRoute } from './components/HomeMenu';
 import { JoinMatchView } from './components/JoinMatchView';
 import { ProfileView } from './components/ProfileView';
 import { SettingsView } from './components/SettingsView';
+import { StatisticsView } from './components/StatisticsView';
 import { VsComputerView } from './components/VsComputerView';
 import { createNewMatch } from './engine/match';
 import {
@@ -21,6 +22,7 @@ import {
   loadLocalProfile,
   saveAppSettings,
   saveLocalProfile,
+  loadPlayerStatistics,
 } from './engine/profiles';
 import {
   isNativeAndroidEnvironment,
@@ -46,6 +48,7 @@ export default function App() {
   const [route, setRoute] = useState<ScreenRoute>('ACCUEIL');
   const [profile, setProfile] = useState<PlayerProfile>(() => loadLocalProfile());
   const [settings, setSettings] = useState<AppSettings>(() => loadAppSettings());
+  const [statistics, setStatistics] = useState(() => loadPlayerStatistics(profile.id));
   const [activeMatch, setActiveMatch] = useState<MatchState | null>(null);
   const [lastLaunchConfig, setLastLaunchConfig] = useState<MatchLaunchConfig>({
     mode: 'SOLO_IA',
@@ -478,6 +481,10 @@ export default function App() {
     );
   }
 
+  if (route === 'STATISTIQUES') {
+    return <StatisticsView profile={profile} statistics={statistics} onBack={() => setRoute('ACCUEIL')} />;
+  }
+
   if (route === 'PROFIL') {
     return (
       <ProfileView
@@ -505,7 +512,10 @@ export default function App() {
   return (
     <HomeMenu
       profile={profile}
-      onNavigate={setRoute}
+      onNavigate={(nextRoute) => {
+        if (nextRoute === 'STATISTIQUES') setStatistics(loadPlayerStatistics(profile.id));
+        setRoute(nextRoute);
+      }}
       onQuickPlay={handleQuickPlay}
     />
   );
