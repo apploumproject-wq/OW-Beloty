@@ -343,9 +343,9 @@ export default function App() {
     if (hostSession) {
       void stopHotspotHost();
     }
-    if (clientSessionRef.current) {
-      disconnectClient();
-    }
+    // Un client qui revient à l'accueil reste connecté au salon :
+    // l'hôte conserve son siège et l'état de la partie.
+    // La fermeture réelle de la connexion reste disponible depuis le salon.
     setRoute('ACCUEIL');
   };
 
