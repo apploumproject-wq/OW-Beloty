@@ -205,7 +205,8 @@ export function recordPlayerMatchResult(
   if (won) target.wins += 1;
   else target.losses += 1;
   if (category === 'team' && partnerPseudo) {
-    target.partners[partnerPseudo] = (target.partners[partnerPseudo] ?? 0) + 1;
+    const teamStats = stats.team;
+    teamStats.partners[partnerPseudo] = (teamStats.partners[partnerPseudo] ?? 0) + 1;
   }
   stats.recordedMatchIds = [...stats.recordedMatchIds, matchId].slice(-500);
   window.localStorage.setItem(STATS_STORAGE_PREFIX + profileId, JSON.stringify(stats));
