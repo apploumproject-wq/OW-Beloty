@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Trophy, Users } from 'lucide-react';
+import { BarChart3, Users } from 'lucide-react';
 import { PlayerProfile } from '../types/game';
 import { PlayerStatistics } from '../engine/profiles';
 import { SubPageHeader } from './SubPageHeader';
