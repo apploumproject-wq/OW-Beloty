@@ -36,6 +36,11 @@ android {
         debug {
             applicationIdSuffix ".debug"
             debuggable true
+            // Utilise la clé persistante OW'Beloty quand elle est fournie par GitHub Actions.
+            // Sinon, Gradle conserve la signature debug standard pour les builds locaux.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
             minifyEnabled false
