@@ -89,6 +89,18 @@ jobs:
             exit 1
           fi
 
+      - name: Vérifier le coffre et la clé de signature
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          keytool -list -keystore android/app/owbeloty-upload.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
+          echo "Coffre de signature valide."
+          keytool -exportcert -alias "$ANDROID_KEY_ALIAS" -keystore android/app/owbeloty-upload.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" -file /tmp/owbeloty-cert.der >/dev/null
+          echo "Clé privée et alias valides."
+          openssl dgst -sha256 /tmp/owbeloty-cert.der
+
       - name: Générer l'APK signé
         working-directory: android
         run: |
