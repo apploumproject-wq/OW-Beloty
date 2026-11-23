@@ -62,7 +62,33 @@ jobs:
       - name: Synchroniser Capacitor
         run: bunx cap sync android
 
-      - name: Générer l'APK
+      - name: Préparer la signature persistante
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/owbeloty-upload.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=owbeloty-upload.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Vérifier la présence de la clé persistante
+        run: |
+          if [ ! -f android/keystore.properties ] || [ ! -f android/app/owbeloty-upload.jks ]; then
+            echo "::error::La clé permanente n'est pas configurée. Ajoutez les 4 secrets ANDROID_* dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Générer l'APK signé
         working-directory: android
         run: |
           chmod +x ./gradlew
