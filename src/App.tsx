@@ -329,6 +329,10 @@ export default function App() {
     launchLocalOrSoloMatch('SOLO_IA', settings.turnDirection);
   };
 
+  const handleNewSoloMatch = () => {
+    launchLocalOrSoloMatch('SOLO_IA', settings.turnDirection);
+  };
+
   const handleRestartMatch = (): MatchState => {
     const mode =
       lastLaunchConfig.mode === 'LOCAL_TEST' ? 'LOCAL_TEST' : 'SOLO_IA';
@@ -515,6 +519,12 @@ export default function App() {
         clientState?.phase === 'EN_PARTIE' &&
         clientState.matchState
       )}
+      canResumeSoloMatch={Boolean(
+        lastLaunchConfig.mode === 'SOLO_IA' &&
+        activeMatch &&
+        activeMatch.phase !== 'FIN_PARTIE'
+      )}
+      onNewSoloMatch={handleNewSoloMatch}
       onNavigate={(nextRoute) => {
         if (nextRoute === 'STATISTIQUES') setStatistics(loadPlayerStatistics(profile.id));
         setRoute(nextRoute);
