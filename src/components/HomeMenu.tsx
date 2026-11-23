@@ -28,14 +28,18 @@ interface HomeMenuProps {
   profile: PlayerProfile;
   onNavigate: (route: ScreenRoute) => void;
   onQuickPlay: () => void;
+  onNewSoloMatch: () => void;
   canResumeMatch?: boolean;
+  canResumeSoloMatch?: boolean;
 }
 
 export const HomeMenu: React.FC<HomeMenuProps> = ({
   profile,
   onNavigate,
   onQuickPlay,
+  onNewSoloMatch,
   canResumeMatch = false,
+  canResumeSoloMatch = false,
 }) => {
   const secondaryMenus: Array<{
     route: ScreenRoute;
@@ -150,6 +154,16 @@ export const HomeMenu: React.FC<HomeMenuProps> = ({
               {canResumeMatch ? 'Retour à la table multijoueur' : 'Mode Solo · 32 cartes'}
             </span>
           </button>
+
+          {canResumeSoloMatch && (
+            <button
+              type="button"
+              onClick={onNewSoloMatch}
+              className="w-full min-h-[48px] px-5 py-3 rounded-xl border border-amber-300/40 bg-black/25 hover:bg-white/[0.08] active:scale-[0.99] text-amber-100 font-semibold text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              Commencer une nouvelle partie
+            </button>
+          )}
 
           {/* Rappel synthétique sans pilules */}
           <div className="pt-3 border-t border-white/10 text-xs text-emerald-100/75 flex flex-wrap gap-x-3 gap-y-1 tabular-nums">
