@@ -622,6 +622,13 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
               {seatCardCountLabel(seatLeft)} cartes
               {disconnectedSeats.includes(seatLeft) ? ' · Déco' : ''}
             </div>
+            {seatCardCountLabel(seatLeft) > 0 && seatLeft !== bottomSeat && (
+              <div className="flex flex-col items-center -space-y-7 pt-1" aria-hidden="true">
+                {Array.from({ length: seatCardCountLabel(seatLeft) }).map((_, idx) => (
+                  <PlayingCard key={`left-back-${idx}`} faceDown size="xs" />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ARÈNE CENTRALE DU PLI & CONTRAT */}
@@ -718,6 +725,13 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
               {seatCardCountLabel(seatRight)} cartes · Plis {oppTeamTricks}
               {disconnectedSeats.includes(seatRight) ? ' · Déco' : ''}
             </div>
+            {seatCardCountLabel(seatRight) > 0 && seatRight !== bottomSeat && (
+              <div className="flex flex-col items-center -space-y-7 pt-1" aria-hidden="true">
+                {Array.from({ length: seatCardCountLabel(seatRight) }).map((_, idx) => (
+                  <PlayingCard key={`right-back-${idx}`} faceDown size="xs" />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -862,21 +876,32 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
               )}
             </div>
 
-            <div className="w-full flex items-center justify-center flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 py-1">
-              {bottomPlayer.hand.map((card) => {
-                const isPlayable = playableIds.has(card.id);
-                const shouldDim = match.phase === 'JEU' && isMyTurn && !isPlayable;
-                return (
-                  <PlayingCard
-                    key={card.id}
-                    card={card}
-                    size="lg"
-                    playable={isPlayable}
-                    dimmed={shouldDim}
-                    onClick={() => handlePlayCardWithPause(bottomSeat, card.id)}
-                  />
-                );
-              })}
+            <div className="w-full max-w-full overflow-visible flex items-center justify-center py-2 px-1">
+              <div className="flex flex-nowrap items-center justify-center">
+                {bottomPlayer.hand.map((card, index) => {
+                  const isPlayable = playableIds.has(card.id);
+                  const shouldDim = match.phase === 'JEU' && isMyTurn && !isPlayable;
+                  const fanOffset = index - (bottomPlayer.hand.length - 1) / 2;
+                  return (
+                    <div
+                      key={card.id}
+                      className={index === 0 ? 'relative shrink-0' : 'relative shrink-0 -ml-[30px] sm:-ml-[38px]'}
+                      style={{
+                        zIndex: index + 1,
+                        transform: `rotate(${fanOffset * 1.5}deg) translateY(${Math.abs(fanOffset) * 1.2}px)`,
+                      }}
+                    >
+                      <PlayingCard
+                        card={card}
+                        size="lg"
+                        playable={isPlayable}
+                        dimmed={shouldDim}
+                        onClick={() => handlePlayCardWithPause(bottomSeat, card.id)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
