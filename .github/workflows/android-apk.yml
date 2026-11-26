@@ -1,4 +1,3 @@
-
 name: OW'Beloty - Build Android APK
 
 on:
@@ -62,46 +61,7 @@ jobs:
       - name: Synchroniser Capacitor
         run: bunx cap sync android
 
-      - name: Préparer la signature persistante
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
-            echo "::error::Configurez les 4 secrets ANDROID_* dans Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/owbeloty-upload.jks
-          test -s android/app/owbeloty-upload.jks
-          cat > android/keystore.properties <<EOF
-          storeFile=owbeloty-upload.jks
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          keyPassword=$ANDROID_KEY_PASSWORD
-          EOF
-
-      - name: Vérifier la présence de la clé persistante
-        run: |
-          if [ ! -f android/keystore.properties ] || [ ! -f android/app/owbeloty-upload.jks ]; then
-            echo "::error::La clé permanente n'est pas configurée. Ajoutez les 4 secrets ANDROID_* dans Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-
-      - name: Vérifier le coffre et la clé de signature
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          keytool -list -keystore android/app/owbeloty-upload.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" >/dev/null
-          echo "Coffre de signature valide."
-          keytool -exportcert -alias "$ANDROID_KEY_ALIAS" -keystore android/app/owbeloty-upload.jks -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD" -file /tmp/owbeloty-cert.der >/dev/null
-          echo "Clé privée et alias valides."
-          openssl dgst -sha256 /tmp/owbeloty-cert.der
-
-      - name: Générer l'APK signé
+      - name: Générer l'APK avec la signature Android par défaut
         working-directory: android
         run: |
           chmod +x ./gradlew
