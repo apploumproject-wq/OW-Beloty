@@ -148,10 +148,10 @@ export const HomeMenu: React.FC<HomeMenuProps> = ({
           >
             <span className="flex items-center gap-3 whitespace-nowrap">
               <Play className="w-5 h-5 fill-current" />
-              {canResumeMatch ? 'Reprendre la partie' : 'Jouer'}
+              {canResumeMatch || canResumeSoloMatch ? 'Reprendre la partie' : 'Jouer'}
             </span>
             <span className="text-xs font-semibold opacity-80 whitespace-nowrap">
-              {canResumeMatch ? 'Retour à la table multijoueur' : 'Mode Solo · 32 cartes'}
+              {canResumeMatch ? 'Retour à la table multijoueur' : canResumeSoloMatch ? 'Retour à votre partie Solo en cours' : 'Mode Solo · 32 cartes'}
             </span>
           </button>
 
