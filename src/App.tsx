@@ -44,12 +44,26 @@ interface MatchLaunchConfig {
   seatOverrides?: Partial<Record<SeatPosition, PlayerProfile>>;
 }
 
+const SOLO_MATCH_STORAGE_PREFIX = 'owbeloty_solo_match_v1_';
+
+function loadSavedSoloMatch(profileId: string): MatchState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(SOLO_MATCH_STORAGE_PREFIX + profileId);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as MatchState;
+    return saved?.matchMode === 'SOLO_IA' && saved.phase !== 'FIN_PARTIE' ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [route, setRoute] = useState<ScreenRoute>('ACCUEIL');
   const [profile, setProfile] = useState<PlayerProfile>(() => loadLocalProfile());
   const [settings, setSettings] = useState<AppSettings>(() => loadAppSettings());
   const [statistics, setStatistics] = useState(() => loadPlayerStatistics(profile.id));
-  const [activeMatch, setActiveMatch] = useState<MatchState | null>(null);
+  const [activeMatch, setActiveMatch] = useState<MatchState | null>(() => loadSavedSoloMatch(profile.id));
   const [lastLaunchConfig, setLastLaunchConfig] = useState<MatchLaunchConfig>({
     mode: 'SOLO_IA',
     turnDirection: settings.turnDirection,
@@ -141,6 +155,18 @@ export default function App() {
     const saved = saveAppSettings(nextSettings);
     setSettings(saved);
   };
+
+  const handleSoloMatchChange = useCallback((nextMatch: MatchState) => {
+    setActiveMatch(nextMatch);
+    if (typeof window !== 'undefined') {
+      const key = SOLO_MATCH_STORAGE_PREFIX + profile.id;
+      if (nextMatch.matchMode === 'SOLO_IA' && nextMatch.phase !== 'FIN_PARTIE') {
+        window.localStorage.setItem(key, JSON.stringify(nextMatch));
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    }
+  }, [profile.id]);
 
   const launchLocalOrSoloMatch = (
     mode: 'SOLO_IA' | 'LOCAL_TEST',
@@ -431,6 +457,7 @@ export default function App() {
     return (
       <GameTableView
         initialMatch={activeMatch}
+        onMatchChange={activeMatch.matchMode === 'SOLO_IA' ? handleSoloMatchChange : undefined}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
         onRestartMatch={handleRestartMatch}
