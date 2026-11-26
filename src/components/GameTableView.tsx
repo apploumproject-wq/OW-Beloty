@@ -52,6 +52,7 @@ import { PlayingCard } from './PlayingCard';
 
 interface GameTableViewProps {
   initialMatch: MatchState;
+  onMatchChange?: (match: MatchState) => void;
   externalMatch?: MatchState | null;
   localPerspectiveSeat?: SeatPosition;
   networkNotice?: string | null;
@@ -72,6 +73,7 @@ interface GameTableViewProps {
 
 export const GameTableView: React.FC<GameTableViewProps> = ({
   initialMatch,
+  onMatchChange,
   externalMatch,
   localPerspectiveSeat = 'SUD',
   networkNotice,
@@ -91,6 +93,10 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
 }) => {
   const [localMatch, setLocalMatch] = useState<MatchState>(initialMatch);
   const match = externalMatch ?? localMatch;
+
+  useEffect(() => {
+    onMatchChange?.(localMatch);
+  }, [localMatch, onMatchChange]);
   const matchMode = match.matchMode ?? 'LOCAL_TEST';
 
   const isSoloAi = matchMode === 'SOLO_IA';
@@ -625,7 +631,9 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
             {seatCardCountLabel(seatLeft) > 0 && seatLeft !== bottomSeat && (
               <div className="flex flex-col items-center -space-y-7 pt-1" aria-hidden="true">
                 {Array.from({ length: seatCardCountLabel(seatLeft) }).map((_, idx) => (
-                  <PlayingCard key={`left-back-${idx}`} faceDown size="xs" />
+                  <div key={`left-back-${idx}`} className="rotate-90">
+                    <PlayingCard faceDown size="xs" />
+                  </div>
                 ))}
               </div>
             )}
@@ -728,7 +736,9 @@ export const GameTableView: React.FC<GameTableViewProps> = ({
             {seatCardCountLabel(seatRight) > 0 && seatRight !== bottomSeat && (
               <div className="flex flex-col items-center -space-y-7 pt-1" aria-hidden="true">
                 {Array.from({ length: seatCardCountLabel(seatRight) }).map((_, idx) => (
-                  <PlayingCard key={`right-back-${idx}`} faceDown size="xs" />
+                  <div key={`right-back-${idx}`} className="-rotate-90">
+                    <PlayingCard faceDown size="xs" />
+                  </div>
                 ))}
               </div>
             )}
