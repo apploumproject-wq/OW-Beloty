@@ -202,6 +202,10 @@ export default function App() {
         : seatOverrides;
 
     setLastLaunchConfig({ mode, turnDirection, seatOverrides: resolvedOverrides });
+    // Une nouvelle partie ne doit jamais réutiliser une sauvegarde de la partie précédente.
+    if (mode === 'SOLO_IA' && typeof window !== 'undefined') {
+      window.localStorage.removeItem(SOLO_MATCH_STORAGE_PREFIX + profile.id);
+    }
     const fresh = createNewMatch(
       profile,
       turnDirection,
@@ -456,6 +460,7 @@ export default function App() {
   if (route === 'JOUER' && activeMatch) {
     return (
       <GameTableView
+        key={activeMatch.matchId}
         initialMatch={activeMatch}
         onMatchChange={activeMatch.matchMode === 'SOLO_IA' ? handleSoloMatchChange : undefined}
         settings={settings}
